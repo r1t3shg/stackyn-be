@@ -127,21 +127,16 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			return
 		}
 
-		if req.Name == "" || req.RepoURL == "" {
+		if req.Name == "" || req.RepoURL == "" || req.Branch == "" {
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
-				"error": "name and repo_url are required",
+				"error": "name, repo_url, and branch are required",
 				"app":   nil,
 			})
 			return
 		}
 
-		// Default branch to "main" if not provided
-		if req.Branch == "" {
-			req.Branch = "main"
-		}
-
 		// Create app first
-		app, err := appStore.Create(req.Name, req.RepoURL)
+		app, err := appStore.Create(req.Name, req.RepoURL, req.Branch)
 		if err != nil {
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),
@@ -151,11 +146,16 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		}
 
 		// Create initial deployment
-		// TODO: App.ID is now string (per new schema), but deploymentStore.Create expects int.
-		// This needs to be updated to work with the new text-based ID schema.
-		// For now, this will cause a compilation error and needs to be addressed.
-		_ = app.ID                                   // Temporary to avoid unused variable error
-		deployment, err := deploymentStore.Create(0) // TODO: Fix this - app.ID is now string
+		// Convert app.ID (string) to int for deployment creation
+		appID, err := strconv.Atoi(app.ID)
+		if err != nil {
+			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
+				"error": fmt.Sprintf("Invalid app ID format: %v", err),
+				"app":   app,
+			})
+			return
+		}
+		deployment, err := deploymentStore.Create(appID)
 		if err != nil {
 			log.Printf("Warning: failed to create deployment: %v", err)
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{

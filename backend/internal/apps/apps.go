@@ -27,12 +27,12 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-func (s *Store) Create(name, repoURL string) (*App, error) {
+func (s *Store) Create(name, repoURL, branch string) (*App, error) {
 	var app App
 	err := s.db.QueryRow(
-		"INSERT INTO apps (name, repo_url, branch) VALUES ($1, $2, $3) RETURNING id, name, repo_url, branch, url, status, created_at, updated_at",
-		name, repoURL,
-	).Scan(&app.ID, &app.Name, &app.RepoURL, &app.CreatedAt, &app.UpdatedAt)
+		"INSERT INTO apps (name, repo_url, branch) VALUES ($1, $2, $3) RETURNING id, name, repo_url, branch, COALESCE(url, '') as url, COALESCE(status, '') as status, created_at, updated_at",
+		name, repoURL, branch,
+	).Scan(&app.ID, &app.Name, &app.RepoURL, &app.Branch, &app.URL, &app.Status, &app.CreatedAt, &app.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (s *Store) Delete(id int) error {
 //	ORDER BY created_at DESC
 func (s *Store) ListAppsByUserID(ctx context.Context, userID string) ([]App, error) {
 	query := `
-       SELECT id, user_id, name, COALESCE(slug, '') as slug, COALESCE(status, '') as status, COALESCE(url, '') as url, repo_url, branch, created_at, updated_at
+       SELECT id, user_id, name, COALESCE(slug, '') as slug, COALESCE(status, '') as status, COALESCE(url, '') as url, repo_url, COALESCE(branch, '') as branch, created_at, updated_at
        FROM apps
        WHERE user_id = $1
        ORDER BY created_at DESC
