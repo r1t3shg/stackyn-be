@@ -65,3 +65,13 @@ func (c *Cloner) Clone(repoURL string, deploymentID int) (string, error) {
 	return repoDir, nil
 }
 
+// CheckDockefile checks if a Dockerfile exists in the repository directory
+func CheckDockerfile(repoPath string) error {
+	dockerfilePath := filepath.Join(repoPath, "Dockerfile")
+
+	if _, err := os.Stat(dockerfilePath); os.IsNotExist(err) {
+		return fmt.Errorf("Dockerfile not found in repository root directory")
+	}
+
+	return nil
+}

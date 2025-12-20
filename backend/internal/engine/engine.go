@@ -77,12 +77,12 @@ func NewEngine(
 // It performs all steps sequentially: clone -> build -> run -> update status.
 //
 // Deployment pipeline:
-//   1. Update status to "building"
-//   2. Clone the Git repository
-//   3. Build Docker image from the repository
-//   4. Parse and store build logs
-//   5. Run container with Traefik labels
-//   6. Update status to "running"
+//  1. Update status to "building"
+//  2. Clone the Git repository
+//  3. Build Docker image from the repository
+//  4. Parse and store build logs
+//  5. Run container with Traefik labels
+//  6. Update status to "running"
 //
 // If any step fails, the deployment status is updated to "failed" with an error message.
 //
@@ -120,6 +120,13 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 		// Record the error in the database before returning
 		e.deploymentStore.UpdateError(deploymentID, fmt.Sprintf("Git clone failed: %v", err))
 		return fmt.Errorf("git clone failed: %w", err)
+	}
+
+	// Check if Dockerfile exists before attempting to build
+	if err := gitrepo.CheckDockerfile(repoPath); err != nil {
+		errorMsg := "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile."
+		e.deploymentStore.UpdateError(deploymentID, errorMsg)
+		return fmt.Errorf("dockerfile check failed: %w", err)
 	}
 
 	// Step 2: Build Docker image from the cloned repository
@@ -237,4 +244,3 @@ func (e *Engine) RunLoop(ctx context.Context) {
 		}
 	}
 }
-
