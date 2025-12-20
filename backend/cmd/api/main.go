@@ -73,7 +73,7 @@ func main() {
 		r.Route("/apps", func(r chi.Router) {
 			r.Get("/", listApps(appStore))
 			r.Post("/", createApp(appStore, deploymentStore, cloner))
-			r.Get("/{id}", getApp(appStore))
+			r.Get("/{id}", getApp(appStore, deploymentStore))
 			r.Delete("/{id}", deleteApp(appStore))
 			r.Get("/{id}/deployments", listDeployments(deploymentStore))
 		})
@@ -211,7 +211,7 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 	}
 }
 
-func getApp(store *apps.Store) http.HandlerFunc {
+func getApp(appStore *apps.Store, deploymentStore *deployments.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
@@ -219,13 +219,54 @@ func getApp(store *apps.Store) http.HandlerFunc {
 			return
 		}
 
-		app, err := store.GetByID(id)
+		app, err := appStore.GetByID(id)
 		if err != nil {
 			respondError(w, http.StatusNotFound, "App not found")
 			return
 		}
 
-		respondJSON(w, http.StatusOK, app)
+		// Get the latest deployment for this app
+		deployments, err := deploymentStore.ListByAppID(id)
+		var activeDeployment *deployments.Deployment
+		if err == nil && len(deployments) > 0 {
+			activeDeployment = deployments[0] // First one is the latest (ordered by created_at DESC)
+		}
+
+		// Build response with runtime and deployment info
+		response := map[string]interface{}{
+			"id":        app.ID,
+			"name":      app.Name,
+			"slug":      app.Slug,
+			"status":    app.Status,
+			"url":       app.URL,
+			"repo_url":  app.RepoURL,
+			"branch":    app.Branch,
+			"created_at": app.CreatedAt,
+			"updated_at": app.UpdatedAt,
+		}
+
+		// Add deployment info
+		if activeDeployment != nil {
+			// Map deployment status to state
+			state := string(activeDeployment.Status)
+			// Format deployment ID as "dep_{id}"
+			activeDeploymentID := fmt.Sprintf("dep_%d", activeDeployment.ID)
+			
+			response["deployment"] = map[string]interface{}{
+				"active_deployment_id": activeDeploymentID,
+				"last_deployed_at":     activeDeployment.UpdatedAt,
+				"state":                state,
+			}
+		} else {
+			// No deployment found
+			response["deployment"] = map[string]interface{}{
+				"active_deployment_id": nil,
+				"last_deployed_at":    nil,
+				"state":               "none",
+			}
+		}
+
+		respondJSON(w, http.StatusOK, response)
 	}
 }
 

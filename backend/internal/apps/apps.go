@@ -42,9 +42,9 @@ func (s *Store) Create(name, repoURL, branch string) (*App, error) {
 func (s *Store) GetByID(id int) (*App, error) {
 	var app App
 	err := s.db.QueryRow(
-		"SELECT id, name, repo_url, created_at, updated_at FROM apps WHERE id = $1",
+		"SELECT id, name, COALESCE(slug, '') as slug, COALESCE(status, '') as status, COALESCE(url, '') as url, repo_url, COALESCE(branch, '') as branch, created_at, updated_at FROM apps WHERE id = $1",
 		id,
-	).Scan(&app.ID, &app.Name, &app.RepoURL, &app.CreatedAt, &app.UpdatedAt)
+	).Scan(&app.ID, &app.Name, &app.Slug, &app.Status, &app.URL, &app.RepoURL, &app.Branch, &app.CreatedAt, &app.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
