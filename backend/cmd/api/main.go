@@ -82,6 +82,7 @@ func main() {
 		// Deployments endpoints
 		r.Route("/deployments", func(r chi.Router) {
 			r.Get("/{id}", getDeployment(deploymentStore))
+			r.Get("/{id}/logs", getDeploymentLogs(deploymentStore))
 		})
 	})
 
@@ -409,6 +410,44 @@ func getDeployment(store *deployments.Store) http.HandlerFunc {
 		}
 
 		respondJSON(w, http.StatusOK, deployment)
+	}
+}
+
+func getDeploymentLogs(store *deployments.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(chi.URLParam(r, "id"))
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid deployment ID")
+			return
+		}
+
+		deployment, err := store.GetByID(id)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "Deployment not found")
+			return
+		}
+
+		// Build response with logs
+		response := map[string]interface{}{
+			"deployment_id": deployment.ID,
+			"status":        deployment.Status,
+		}
+
+		// Add build log if available
+		if deployment.BuildLog.Valid && deployment.BuildLog.String != "" {
+			response["build_log"] = deployment.BuildLog.String
+		} else {
+			response["build_log"] = nil
+		}
+
+		// Add error message if available
+		if deployment.ErrorMessage.Valid && deployment.ErrorMessage.String != "" {
+			response["error_message"] = deployment.ErrorMessage.String
+		} else {
+			response["error_message"] = nil
+		}
+
+		respondJSON(w, http.StatusOK, response)
 	}
 }
 
