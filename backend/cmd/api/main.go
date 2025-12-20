@@ -75,6 +75,7 @@ func main() {
 			r.Post("/", createApp(appStore, deploymentStore, cloner))
 			r.Get("/{id}", getApp(appStore, deploymentStore))
 			r.Delete("/{id}", deleteApp(appStore))
+			r.Post("/{id}/redeploy", redeployApp(appStore, deploymentStore, cloner))
 			r.Get("/{id}/deployments", listDeployments(deploymentStore))
 		})
 
@@ -267,6 +268,94 @@ func getApp(appStore *apps.Store, deploymentStore *deployments.Store) http.Handl
 		}
 
 		respondJSON(w, http.StatusOK, response)
+	}
+}
+
+func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner *gitrepo.Cloner) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.Atoi(chi.URLParam(r, "id"))
+		if err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid app ID")
+			return
+		}
+
+		// Get the app
+		app, err := appStore.GetByID(id)
+		if err != nil {
+			respondError(w, http.StatusNotFound, "App not found")
+			return
+		}
+
+		// Create new deployment
+		appID, err := strconv.Atoi(app.ID)
+		if err != nil {
+			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
+				"error": fmt.Sprintf("Invalid app ID format: %v", err),
+				"app":   app,
+			})
+			return
+		}
+
+		deployment, err := deploymentStore.Create(appID)
+		if err != nil {
+			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
+				"error": fmt.Sprintf("Failed to create deployment: %v", err),
+				"app":   app,
+			})
+			return
+		}
+
+		// Validate repository has Dockerfile
+		// Use a temporary deployment ID for validation
+		tempDeploymentID := int(time.Now().Unix())
+		
+		// Use branch from app, default to "main" if empty
+		branch := app.Branch
+		if branch == "" {
+			branch = "main"
+		}
+
+		repoPath, err := cloner.Clone(app.RepoURL, tempDeploymentID, branch)
+		if err != nil {
+			// Update deployment with error
+			errorMsg := fmt.Sprintf("Failed to clone repository: %v", err)
+			deploymentStore.UpdateError(deployment.ID, errorMsg)
+			// Refresh deployment to get updated status
+			deployment, _ = deploymentStore.GetByID(deployment.ID)
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error":      errorMsg,
+				"app":        app,
+				"deployment": deployment,
+			})
+			return
+		}
+
+		// Check if Dockerfile exists
+		if err := gitrepo.CheckDockerfile(repoPath); err != nil {
+			// Clean up cloned repository
+			os.RemoveAll(repoPath)
+			// Update deployment with error
+			errorMsg := "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile."
+			deploymentStore.UpdateError(deployment.ID, errorMsg)
+			// Refresh deployment to get updated status
+			deployment, _ = deploymentStore.GetByID(deployment.ID)
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error":      errorMsg,
+				"app":        app,
+				"deployment": deployment,
+			})
+			return
+		}
+
+		// Clean up validation repository
+		os.RemoveAll(repoPath)
+
+		// Deployment created successfully, will be processed by worker
+		respondJSON(w, http.StatusCreated, map[string]interface{}{
+			"message":    "Redeployment initiated",
+			"app":        app,
+			"deployment": deployment,
+		})
 	}
 }
 
