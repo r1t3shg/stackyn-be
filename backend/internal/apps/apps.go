@@ -52,7 +52,7 @@ func (s *Store) GetByID(id int) (*App, error) {
 }
 
 func (s *Store) List() ([]*App, error) {
-	rows, err := s.db.Query("SELECT id, name, repo_url, branch, url, status, created_at, updated_at FROM apps ORDER BY created_at DESC")
+	rows, err := s.db.Query("SELECT id, name, slug, repo_url, branch, url, status, created_at, updated_at FROM apps ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (s *Store) List() ([]*App, error) {
 	var apps []*App
 	for rows.Next() {
 		var app App
-		if err := rows.Scan(&app.ID, &app.Name, &app.RepoURL, &app.Branch, &app.URL, &app.Status, &app.CreatedAt, &app.UpdatedAt); err != nil {
+		if err := rows.Scan(&app.ID, &app.Name, &app.Slug, &app.RepoURL, &app.Branch, &app.URL, &app.Status, &app.CreatedAt, &app.UpdatedAt); err != nil {
 			return nil, err
 		}
 		apps = append(apps, &app)
