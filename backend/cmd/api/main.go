@@ -57,6 +57,16 @@ func main() {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 
+	// Required APIs
+	// GET : Fetch all apps
+	// POST : create app
+	// GET : fetch app by id
+	// POST : redeploy
+	// GET : deployment status
+	// GET : logs
+	// POST : add env var
+	// DELETE : env var
+
 	// API routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Apps endpoints

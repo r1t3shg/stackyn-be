@@ -30,7 +30,7 @@ func NewStore(db *sql.DB) *Store {
 func (s *Store) Create(name, repoURL string) (*App, error) {
 	var app App
 	err := s.db.QueryRow(
-		"INSERT INTO apps (name, repo_url) VALUES ($1, $2) RETURNING id, name, repo_url, created_at, updated_at",
+		"INSERT INTO apps (name, repo_url, branch) VALUES ($1, $2, $3) RETURNING id, name, repo_url, branch, url, status, created_at, updated_at",
 		name, repoURL,
 	).Scan(&app.ID, &app.Name, &app.RepoURL, &app.CreatedAt, &app.UpdatedAt)
 	if err != nil {
@@ -52,7 +52,7 @@ func (s *Store) GetByID(id int) (*App, error) {
 }
 
 func (s *Store) List() ([]*App, error) {
-	rows, err := s.db.Query("SELECT id, name, repo_url, created_at, updated_at FROM apps ORDER BY created_at DESC")
+	rows, err := s.db.Query("SELECT id, name, repo_url, branch, url, status, created_at, updated_at FROM apps ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
