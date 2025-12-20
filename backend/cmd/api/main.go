@@ -148,13 +148,19 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 
 		// Decode JSON request body
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			respondError(w, http.StatusBadRequest, "Invalid request body")
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": "Invalid request body",
+				"app":   nil,
+			})
 			return
 		}
 
 		// Validate required fields
 		if req.Name == "" || req.RepoURL == "" {
-			respondError(w, http.StatusBadRequest, "name and repo_url are required")
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": "name and repo_url are required",
+				"app":   nil,
+			})
 			return
 		}
 
@@ -163,7 +169,10 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		tempDeploymentID := int(time.Now().Unix())
 		repoPath, err := cloner.Clone(req.RepoURL, tempDeploymentID)
 		if err != nil {
-			respondError(w, http.StatusBadRequest, fmt.Sprintf("Failed to clone repository: %v", err))
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": fmt.Sprintf("Failed to clone repository: %v", err),
+				"app":   nil,
+			})
 			return
 		}
 
@@ -171,7 +180,10 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		if err := gitrepo.CheckDockerfile(repoPath); err != nil {
 			// Clean up cloned repository
 			os.RemoveAll(repoPath)
-			respondError(w, http.StatusBadRequest, "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile.")
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile.",
+				"app":   nil,
+			})
 			return
 		}
 
@@ -181,7 +193,10 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		// Create app if Dockerfile validation passes
 		app, err := appStore.Create(req.Name, req.RepoURL)
 		if err != nil {
-			respondError(w, http.StatusInternalServerError, err.Error())
+			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+				"app":   nil,
+			})
 			return
 		}
 
