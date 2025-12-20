@@ -176,6 +176,7 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			// Refresh deployment to get updated status
 			deployment, _ = deploymentStore.GetByID(deployment.ID)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error":      errorMsg,
 				"app":        app,
 				"deployment": deployment,
 			})
@@ -192,6 +193,7 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			// Refresh deployment to get updated status
 			deployment, _ = deploymentStore.GetByID(deployment.ID)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
+				"error":      errorMsg,
 				"app":        app,
 				"deployment": deployment,
 			})
