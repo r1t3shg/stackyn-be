@@ -52,7 +52,7 @@ func (s *Store) GetByID(id int) (*App, error) {
 }
 
 func (s *Store) List() ([]*App, error) {
-	rows, err := s.db.Query("SELECT id, name, slug, repo_url, branch, url, status, created_at, updated_at FROM apps ORDER BY created_at DESC")
+	rows, err := s.db.Query("SELECT id, name, COALESCE(slug, '') as slug, repo_url, COALESCE(branch, '') as branch, COALESCE(url, '') as url, COALESCE(status, '') as status, created_at, updated_at FROM apps ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (s *Store) Delete(id int) error {
 //	ORDER BY created_at DESC
 func (s *Store) ListAppsByUserID(ctx context.Context, userID string) ([]App, error) {
 	query := `
-       SELECT id, user_id, name, slug, status, url, repo_url, branch, created_at, updated_at
+       SELECT id, user_id, name, COALESCE(slug, '') as slug, COALESCE(status, '') as status, COALESCE(url, '') as url, repo_url, branch, created_at, updated_at
        FROM apps
        WHERE user_id = $1
        ORDER BY created_at DESC
