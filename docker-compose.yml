@@ -1,7 +1,7 @@
 services:
   # Traefik - Reverse Proxy and Load Balancer
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6.5
     container_name: stackyn-traefik
     restart: unless-stopped
     ports:
@@ -12,7 +12,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
-      - ./traefik/acme:/etc/traefik/acme:ro
+      - ./traefik/acme:/etc/traefik/acme:rw
     networks:
       - stackyn-network
     labels:
@@ -61,7 +61,7 @@ services:
       - ./volumes/db:/app/data/db:rw
       - ./volumes/logs:/app/data/logs:rw
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgres://user:password@postgres:5432/stackyn?sslmode=disable}
+      - DATABASE_URL=${DATABASE_URL:-postgres://stackyn:changeme@postgres:5432/stackyn?sslmode=disable}
       - DOCKER_HOST=unix:///var/run/docker.sock
       - BASE_DOMAIN=${BASE_DOMAIN:-staging.stackyn.com}
       - PORT=8080
