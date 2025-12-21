@@ -3,9 +3,18 @@
 
 http:
   routers:
-    # Frontend Router
-    frontend:
-      rule: "Host(`stackyn.local`) || Host(`staging.stackyn.com`)"
+    # Frontend Router - HTTP (for .local domains)
+    frontend-http:
+      rule: "Host(`stackyn.local`)"
+      entryPoints:
+        - web
+      service: frontend
+      middlewares:
+        - frontend-headers
+
+    # Frontend Router - HTTPS (for real domains with SSL)
+    frontend-https:
+      rule: "Host(`staging.stackyn.com`)"
       entryPoints:
         - websecure
       service: frontend
@@ -14,9 +23,28 @@ http:
       middlewares:
         - frontend-headers
 
-    # Backend API Router
-    backend:
-      rule: "Host(`api.stackyn.local`) || Host(`api.staging.stackyn.com`)"
+    # Frontend Router - HTTP to HTTPS redirect (for real domains)
+    frontend-redirect:
+      rule: "Host(`staging.stackyn.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: frontend
+
+    # Backend API Router - HTTP (for .local domains)
+    backend-http:
+      rule: "Host(`api.stackyn.local`)"
+      entryPoints:
+        - web
+      service: backend
+      middlewares:
+        - cors
+        - backend-headers
+
+    # Backend API Router - HTTPS (for real domains with SSL)
+    backend-https:
+      rule: "Host(`api.staging.stackyn.com`)"
       entryPoints:
         - websecure
       service: backend
@@ -25,4 +53,13 @@ http:
       middlewares:
         - cors
         - backend-headers
+
+    # Backend API Router - HTTP to HTTPS redirect (for real domains)
+    backend-redirect:
+      rule: "Host(`api.staging.stackyn.com`)"
+      entryPoints:
+        - web
+      middlewares:
+        - https-redirect
+      service: backend
 

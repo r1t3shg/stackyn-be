@@ -38,10 +38,15 @@ services:
       - stackyn-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`stackyn.local`) || Host(`staging.stackyn.com`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.service=frontend"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      # HTTP router for .local (no SSL)
+      - "traefik.http.routers.frontend-http.rule=Host(`stackyn.local`)"
+      - "traefik.http.routers.frontend-http.entrypoints=web"
+      - "traefik.http.routers.frontend-http.service=frontend"
+      # HTTPS router for real domain (with SSL)
+      - "traefik.http.routers.frontend-https.rule=Host(`staging.stackyn.com`)"
+      - "traefik.http.routers.frontend-https.entrypoints=websecure"
+      - "traefik.http.routers.frontend-https.service=frontend"
+      - "traefik.http.routers.frontend-https.tls.certresolver=letsencrypt"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     depends_on:
       - backend
@@ -67,10 +72,15 @@ services:
       - PORT=8080
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.stackyn.local`) || Host(`api.staging.stackyn.com`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.service=backend"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      # HTTP router for .local (no SSL)
+      - "traefik.http.routers.backend-http.rule=Host(`api.stackyn.local`)"
+      - "traefik.http.routers.backend-http.entrypoints=web"
+      - "traefik.http.routers.backend-http.service=backend"
+      # HTTPS router for real domain (with SSL)
+      - "traefik.http.routers.backend-https.rule=Host(`api.staging.stackyn.com`)"
+      - "traefik.http.routers.backend-https.entrypoints=websecure"
+      - "traefik.http.routers.backend-https.service=backend"
+      - "traefik.http.routers.backend-https.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
     depends_on:
       - postgres

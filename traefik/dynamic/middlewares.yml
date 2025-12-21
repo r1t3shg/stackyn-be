@@ -39,3 +39,9 @@ http:
         accessControlMaxAge: 100
         addVaryHeader: true
 
+    # HTTPS Redirect Middleware (for real domains)
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
