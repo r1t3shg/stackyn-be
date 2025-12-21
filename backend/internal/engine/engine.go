@@ -61,6 +61,11 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	if err := e.deploymentStore.UpdateStatus(deploymentID, deployments.StatusBuilding); err != nil {
 		return fmt.Errorf("failed to update status: %w", err)
 	}
+	
+	// Update app status to "Building"
+	if err := e.appStore.UpdateStatus(deployment.AppID, "Building"); err != nil {
+		log.Printf("Warning: failed to update app status to Building: %v", err)
+	}
 
 	// Use branch from app, default to "main" only if empty
 	branch := app.Branch
@@ -75,6 +80,8 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	repoPath, err := e.cloner.Clone(app.RepoURL, deploymentID, branch)
 	if err != nil {
 		e.deploymentStore.UpdateError(deploymentID, fmt.Sprintf("Git clone failed: %v", err))
+		// Update app status to "Failed"
+		e.appStore.UpdateStatus(deployment.AppID, "Failed")
 		return fmt.Errorf("git clone failed: %w", err)
 	}
 
@@ -82,6 +89,8 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	if err := gitrepo.CheckDockerfile(repoPath); err != nil {
 		errorMsg := "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile."
 		e.deploymentStore.UpdateError(deploymentID, errorMsg)
+		// Update app status to "Failed"
+		e.appStore.UpdateStatus(deployment.AppID, "Failed")
 		return fmt.Errorf("dockerfile check failed: %w", err)
 	}
 
@@ -90,6 +99,8 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	builtImage, buildLogReader, err := e.builder.Build(ctx, repoPath, imageName)
 	if err != nil {
 		e.deploymentStore.UpdateError(deploymentID, fmt.Sprintf("Docker build failed: %v", err))
+		// Update app status to "Failed"
+		e.appStore.UpdateStatus(deployment.AppID, "Failed")
 		return fmt.Errorf("docker build failed: %w", err)
 	}
 
@@ -113,6 +124,8 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	containerID, err := e.runner.Run(ctx, builtImage, subdomain, e.baseDomain)
 	if err != nil {
 		e.deploymentStore.UpdateError(deploymentID, fmt.Sprintf("Container run failed: %v", err))
+		// Update app status to "Failed"
+		e.appStore.UpdateStatus(deployment.AppID, "Failed")
 		return fmt.Errorf("container run failed: %w", err)
 	}
 
@@ -124,6 +137,12 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	// Step 4: Mark as running
 	if err := e.deploymentStore.UpdateStatus(deploymentID, deployments.StatusRunning); err != nil {
 		return fmt.Errorf("failed to update status: %w", err)
+	}
+
+	// Update app status to "Healthy" and set URL
+	appURL := fmt.Sprintf("https://%s.%s", subdomain, e.baseDomain)
+	if err := e.appStore.UpdateStatusAndURL(deployment.AppID, "Healthy", appURL); err != nil {
+		log.Printf("Warning: failed to update app status and URL: %v", err)
 	}
 
 	log.Printf("Deployment %d completed successfully. Container: %s, Subdomain: %s.%s",

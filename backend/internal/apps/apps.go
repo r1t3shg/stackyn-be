@@ -77,6 +77,33 @@ func (s *Store) Delete(id int) error {
 	return err
 }
 
+// UpdateStatus updates the status of an app
+func (s *Store) UpdateStatus(id int, status string) error {
+	_, err := s.db.Exec(
+		"UPDATE apps SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+		status, id,
+	)
+	return err
+}
+
+// UpdateURL updates the URL of an app
+func (s *Store) UpdateURL(id int, url string) error {
+	_, err := s.db.Exec(
+		"UPDATE apps SET url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+		url, id,
+	)
+	return err
+}
+
+// UpdateStatusAndURL updates both status and URL of an app
+func (s *Store) UpdateStatusAndURL(id int, status, url string) error {
+	_, err := s.db.Exec(
+		"UPDATE apps SET status = $1, url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3",
+		status, url, id,
+	)
+	return err
+}
+
 // ListAppsByUserID queries all apps owned by the given user_id, ordered by created_at DESC.
 // Returns an empty slice if no apps are found.
 // SQL Query:

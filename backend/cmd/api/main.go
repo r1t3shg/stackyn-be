@@ -52,6 +52,27 @@ func main() {
 
 	// Setup router
 	r := chi.NewRouter()
+	
+	// CORS middleware - must be first
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+			w.Header().Set("Access-Control-Allow-Credentials", "false")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			
+			// Handle preflight OPTIONS request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			
+			next.ServeHTTP(w, r)
+		})
+	})
+	
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
@@ -166,6 +187,11 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			})
 			return
 		}
+		
+		// Update app status to "Pending" when deployment is created
+		if err := appStore.UpdateStatus(appID, "Pending"); err != nil {
+			log.Printf("Warning: failed to update app status to Pending: %v", err)
+		}
 
 		// Validate repository has Dockerfile after creating app and deployment
 		// Use a temporary deployment ID for validation
@@ -175,6 +201,8 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			// Update deployment with error
 			errorMsg := fmt.Sprintf("Failed to clone repository: %v", err)
 			deploymentStore.UpdateError(deployment.ID, errorMsg)
+			// Update app status to "Failed"
+			appStore.UpdateStatus(appID, "Failed")
 			// Refresh deployment to get updated status
 			deployment, _ = deploymentStore.GetByID(deployment.ID)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
@@ -192,6 +220,8 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			// Update deployment with error
 			errorMsg := "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile."
 			deploymentStore.UpdateError(deployment.ID, errorMsg)
+			// Update app status to "Failed"
+			appStore.UpdateStatus(appID, "Failed")
 			// Refresh deployment to get updated status
 			deployment, _ = deploymentStore.GetByID(deployment.ID)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
@@ -305,6 +335,11 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 			})
 			return
 		}
+		
+		// Update app status to "Pending" when redeployment is initiated
+		if err := appStore.UpdateStatus(appID, "Pending"); err != nil {
+			log.Printf("Warning: failed to update app status to Pending: %v", err)
+		}
 
 		// Validate repository has Dockerfile
 		// Use a temporary deployment ID for validation
@@ -321,6 +356,8 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 			// Update deployment with error
 			errorMsg := fmt.Sprintf("Failed to clone repository: %v", err)
 			deploymentStore.UpdateError(deployment.ID, errorMsg)
+			// Update app status to "Failed"
+			appStore.UpdateStatus(appID, "Failed")
 			// Refresh deployment to get updated status
 			deployment, _ = deploymentStore.GetByID(deployment.ID)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
@@ -338,6 +375,8 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 			// Update deployment with error
 			errorMsg := "Dockerfile is not available in the repository root directory. Please ensure your repository contains a Dockerfile."
 			deploymentStore.UpdateError(deployment.ID, errorMsg)
+			// Update app status to "Failed"
+			appStore.UpdateStatus(appID, "Failed")
 			// Refresh deployment to get updated status
 			deployment, _ = deploymentStore.GetByID(deployment.ID)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
@@ -452,6 +491,8 @@ func getDeploymentLogs(store *deployments.Store) http.HandlerFunc {
 }
 
 func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
+	// Ensure CORS headers are set (in case middleware didn't run)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(payload)
