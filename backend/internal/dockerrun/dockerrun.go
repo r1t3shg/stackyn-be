@@ -3,6 +3,7 @@ package dockerrun
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/docker/docker/api/types/container"
@@ -15,14 +16,17 @@ type Runner struct {
 }
 
 func NewRunner(dockerHost string) (*Runner, error) {
+	log.Printf("[DOCKER] Initializing Docker runner - Host: %s", dockerHost)
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(dockerHost),
 		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
+		log.Printf("[DOCKER] ERROR - Failed to create Docker client: %v", err)
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
 
+	log.Printf("[DOCKER] Docker runner initialized successfully")
 	return &Runner{client: cli}, nil
 }
 
@@ -33,6 +37,8 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 	serviceName := subdomain
 	containerName := subdomain
 	internalPort := 8080 // Default port, can be made configurable if needed
+
+	log.Printf("[DOCKER] Running container - Image: %s, Subdomain: %s, FQDN: %s", imageName, subdomain, fqdn)
 
 	// Create Traefik labels with HTTPS/TLS support
 	labels := map[string]string{
@@ -67,16 +73,22 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 	}
 
 	// Create container
+	log.Printf("[DOCKER] Creating container: %s", containerName)
 	resp, err := r.client.ContainerCreate(ctx, containerConfig, hostConfig, networkConfig, nil, containerName)
 	if err != nil {
+		log.Printf("[DOCKER] ERROR - Failed to create container: %v", err)
 		return "", fmt.Errorf("failed to create container: %w", err)
 	}
+	log.Printf("[DOCKER] Container created - ID: %s", resp.ID)
 
 	// Start container
+	log.Printf("[DOCKER] Starting container: %s", resp.ID)
 	if err := r.client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		log.Printf("[DOCKER] ERROR - Failed to start container: %v", err)
 		return "", fmt.Errorf("failed to start container: %w", err)
 	}
 
+	log.Printf("[DOCKER] Container started successfully - ID: %s, Name: %s, URL: https://%s", resp.ID, containerName, fqdn)
 	return resp.ID, nil
 }
 

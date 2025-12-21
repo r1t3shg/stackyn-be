@@ -35,52 +35,67 @@ import (
 //   9. Setup graceful shutdown signal handling
 //   10. Start the deployment processing loop
 func main() {
+	log.Println("=== Starting Stackyn Deployment Worker ===")
 	// Load configuration from environment variables
 	cfg := config.Load()
+	log.Printf("Configuration loaded - Database: %s, Docker: %s, Base Domain: %s",
+		cfg.DatabaseURL, cfg.DockerHost, cfg.BaseDomain)
 
 	// Initialize database connection
 	// This connects to PostgreSQL using the connection string from config
+	log.Println("Connecting to database...")
 	database, err := db.New(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	// Ensure database connection is closed when worker shuts down
 	defer database.Close()
+	log.Println("Database connection established")
 
 	// Run database migrations
 	// This applies any pending SQL migrations to set up/update the schema
+	log.Println("Running database migrations...")
 	if err := database.Migrate(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
+	log.Println("Database migrations completed")
 
 	// Initialize data stores
 	// These provide database operations for apps and deployments
+	log.Println("Initializing data stores...")
 	appStore := apps.NewStore(database.DB)
 	deploymentStore := deployments.NewStore(database.DB)
+	log.Println("Data stores initialized")
 
 	// Initialize Git cloner
 	// This will clone repositories to a temporary directory
 	workDir := "/tmp/mvp-deployments"
+	log.Printf("Initializing Git cloner with work directory: %s", workDir)
 	// Create the work directory if it doesn't exist
 	// Permissions: 0755 (owner: read/write/execute, group/others: read/execute)
 	if err := os.MkdirAll(workDir, 0755); err != nil {
 		log.Fatalf("Failed to create work directory: %v", err)
 	}
 	cloner := gitrepo.NewCloner(workDir)
+	log.Println("Git cloner initialized")
 
 	// Initialize Docker builder
 	// This connects to the Docker daemon to build images
+	log.Println("Initializing Docker builder...")
 	builder, err := dockerbuild.NewBuilder(cfg.DockerHost)
 	if err != nil {
 		log.Fatalf("Failed to create Docker builder: %v", err)
 	}
+	log.Println("Docker builder initialized")
 
 	// Initialize Docker runner
 	// This connects to the Docker daemon to run containers
+	log.Println("Initializing Docker runner...")
 	runner, err := dockerrun.NewRunner(cfg.DockerHost)
 	if err != nil {
 		log.Fatalf("Failed to create Docker runner: %v", err)
 	}
+	log.Println("Docker runner initialized")
 
 	// Initialize deployment engine
 	// This orchestrates the entire deployment pipeline

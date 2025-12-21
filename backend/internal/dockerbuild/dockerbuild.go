@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 
 	"github.com/docker/docker/api/types"
@@ -28,15 +29,18 @@ type Builder struct {
 //   - *Builder: A new Builder instance ready to build images, or nil on error
 //   - error: Error if Docker client creation fails (connection issue, invalid host, etc.)
 func NewBuilder(dockerHost string) (*Builder, error) {
+	log.Printf("[DOCKER] Initializing Docker builder - Host: %s", dockerHost)
 	// Create Docker client with host configuration and API version negotiation
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(dockerHost),
 		client.WithAPIVersionNegotiation(), // Automatically negotiate API version with daemon
 	)
 	if err != nil {
+		log.Printf("[DOCKER] ERROR - Failed to create Docker client: %v", err)
 		return nil, fmt.Errorf("failed to create docker client: %w", err)
 	}
 
+	log.Printf("[DOCKER] Docker builder initialized successfully")
 	return &Builder{client: cli}, nil
 }
 
@@ -54,6 +58,7 @@ func NewBuilder(dockerHost string) (*Builder, error) {
 //   - io.ReadCloser: A stream containing the Docker build output/logs (must be closed by caller)
 //   - error: Error if tar creation fails, Docker build fails, or image cannot be created
 func (b *Builder) Build(ctx context.Context, repoPath string, imageName string) (string, io.ReadCloser, error) {
+	log.Printf("[DOCKER] Starting build - Image: %s, Context: %s", imageName, repoPath)
 	// Configure Docker build options
 	buildOptions := types.ImageBuildOptions{
 		Tags:       []string{imageName}, // Tag the image with the provided name
@@ -63,8 +68,10 @@ func (b *Builder) Build(ctx context.Context, repoPath string, imageName string) 
 
 	// Create a tar archive of the repository to send as build context
 	// Docker requires the build context to be a tar stream
+	log.Printf("[DOCKER] Creating tar archive of build context...")
 	buildContext, err := createTarContext(repoPath)
 	if err != nil {
+		log.Printf("[DOCKER] ERROR - Failed to create build context: %v", err)
 		return "", nil, fmt.Errorf("failed to create build context: %w", err)
 	}
 	// Ensure the tar stream is closed when done
@@ -72,11 +79,14 @@ func (b *Builder) Build(ctx context.Context, repoPath string, imageName string) 
 
 	// Send build request to Docker daemon
 	// This starts the build process and returns a response with build logs
+	log.Printf("[DOCKER] Sending build request to Docker daemon...")
 	buildResponse, err := b.client.ImageBuild(ctx, buildContext, buildOptions)
 	if err != nil {
+		log.Printf("[DOCKER] ERROR - Build failed: %v", err)
 		return "", nil, fmt.Errorf("failed to build image: %w", err)
 	}
 
+	log.Printf("[DOCKER] Build started successfully for image: %s", imageName)
 	// Return the image name and the build log stream
 	// The caller should read from buildResponse.Body to get build progress
 	return imageName, buildResponse.Body, nil

@@ -25,30 +25,41 @@ type contextKey string
 const userIDKey contextKey = "user_id"
 
 func main() {
+	log.Println("=== Starting Stackyn API Server ===")
 	cfg := config.Load()
+	log.Printf("Configuration loaded - Database: %s, Docker: %s, Base Domain: %s, Port: %s",
+		cfg.DatabaseURL, cfg.DockerHost, cfg.BaseDomain, cfg.Port)
 
 	// Initialize database
+	log.Println("Connecting to database...")
 	database, err := db.New(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
+	log.Println("Database connection established")
 
 	// Run migrations
+	log.Println("Running database migrations...")
 	if err := database.Migrate(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
+	log.Println("Database migrations completed")
 
 	// Initialize stores
+	log.Println("Initializing data stores...")
 	appStore := apps.NewStore(database.DB)
 	deploymentStore := deployments.NewStore(database.DB)
+	log.Println("Data stores initialized")
 
 	// Initialize git cloner for Dockerfile validation
 	workDir := "/tmp/mvp-api-validation"
+	log.Printf("Initializing Git cloner with work directory: %s", workDir)
 	if err := os.MkdirAll(workDir, 0755); err != nil {
 		log.Fatalf("Failed to create validation work directory: %v", err)
 	}
 	cloner := gitrepo.NewCloner(workDir)
+	log.Println("Git cloner initialized")
 
 	// Setup router
 	r := chi.NewRouter()
@@ -112,12 +123,23 @@ func main() {
 
 	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[API] GET /health - Health check")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
 	port := cfg.Port
-	log.Printf("API server starting on port %s", port)
+	log.Printf("=== API server starting on port %s ===", port)
+	log.Println("API endpoints available:")
+	log.Println("  GET  /health - Health check")
+	log.Println("  GET  /api/v1/apps - List all apps")
+	log.Println("  POST /api/v1/apps - Create new app")
+	log.Println("  GET  /api/v1/apps/{id} - Get app by ID")
+	log.Println("  DELETE /api/v1/apps/{id} - Delete app")
+	log.Println("  POST /api/v1/apps/{id}/redeploy - Redeploy app")
+	log.Println("  GET  /api/v1/apps/{id}/deployments - List deployments")
+	log.Println("  GET  /api/v1/deployments/{id} - Get deployment")
+	log.Println("  GET  /api/v1/deployments/{id}/logs - Get deployment logs")
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
@@ -125,17 +147,21 @@ func main() {
 
 func listApps(store *apps.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[API] GET /api/v1/apps - Listing all apps")
 		apps, err := store.List()
 		if err != nil {
+			log.Printf("[API] ERROR - Failed to list apps: %v", err)
 			respondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		log.Printf("[API] Successfully listed %d apps", len(apps))
 		respondJSON(w, http.StatusOK, apps)
 	}
 }
 
 func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner *gitrepo.Cloner) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[API] POST /api/v1/apps - Creating new app")
 		var req struct {
 			Name    string `json:"name"`
 			RepoURL string `json:"repo_url"`
@@ -143,6 +169,7 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Printf("[API] ERROR - Invalid request body: %v", err)
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
 				"error": "Invalid request body",
 				"app":   nil,
@@ -150,7 +177,10 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			return
 		}
 
+		log.Printf("[API] Request - Name: %s, Repo: %s, Branch: %s", req.Name, req.RepoURL, req.Branch)
+
 		if req.Name == "" || req.RepoURL == "" || req.Branch == "" {
+			log.Printf("[API] ERROR - Missing required fields")
 			respondJSON(w, http.StatusBadRequest, map[string]interface{}{
 				"error": "name, repo_url, and branch are required",
 				"app":   nil,
@@ -159,45 +189,53 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		}
 
 		// Create app first
+		log.Printf("[API] Creating app in database...")
 		app, err := appStore.Create(req.Name, req.RepoURL, req.Branch)
 		if err != nil {
+			log.Printf("[API] ERROR - Failed to create app: %v", err)
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
 				"error": err.Error(),
 				"app":   nil,
 			})
 			return
 		}
+		log.Printf("[API] App created successfully - ID: %s, Name: %s", app.ID, app.Name)
 
 		// Create initial deployment
 		// Convert app.ID (string) to int for deployment creation
 		appID, err := strconv.Atoi(app.ID)
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid app ID format: %v", err)
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
 				"error": fmt.Sprintf("Invalid app ID format: %v", err),
 				"app":   app,
 			})
 			return
 		}
+		log.Printf("[API] Creating deployment for app ID: %d", appID)
 		deployment, err := deploymentStore.Create(appID)
 		if err != nil {
-			log.Printf("Warning: failed to create deployment: %v", err)
+			log.Printf("[API] ERROR - Failed to create deployment: %v", err)
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
 				"error": fmt.Sprintf("Failed to create deployment: %v", err),
 				"app":   app,
 			})
 			return
 		}
+		log.Printf("[API] Deployment created - ID: %d, Status: %s", deployment.ID, deployment.Status)
 		
 		// Update app status to "Pending" when deployment is created
 		if err := appStore.UpdateStatus(appID, "Pending"); err != nil {
-			log.Printf("Warning: failed to update app status to Pending: %v", err)
+			log.Printf("[API] WARNING - Failed to update app status to Pending: %v", err)
 		}
 
 		// Validate repository has Dockerfile after creating app and deployment
 		// Use a temporary deployment ID for validation
+		log.Printf("[API] Validating repository - Cloning %s (branch: %s)", req.RepoURL, req.Branch)
 		tempDeploymentID := int(time.Now().Unix())
 		repoPath, err := cloner.Clone(req.RepoURL, tempDeploymentID, req.Branch)
 		if err != nil {
+			log.Printf("[API] ERROR - Git clone failed: %v", err)
 			// Update deployment with error
 			errorMsg := fmt.Sprintf("Failed to clone repository: %v", err)
 			deploymentStore.UpdateError(deployment.ID, errorMsg)
@@ -212,9 +250,12 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			})
 			return
 		}
+		log.Printf("[API] Repository cloned successfully to: %s", repoPath)
 
 		// Check if Dockerfile exists
+		log.Printf("[API] Checking for Dockerfile in repository...")
 		if err := gitrepo.CheckDockerfile(repoPath); err != nil {
+			log.Printf("[API] ERROR - Dockerfile not found: %v", err)
 			// Clean up cloned repository
 			os.RemoveAll(repoPath)
 			// Update deployment with error
@@ -233,9 +274,11 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 		}
 
 		// Clean up validation repository
+		log.Printf("[API] Cleaning up validation repository...")
 		os.RemoveAll(repoPath)
 
 		// If validation passes, deployment remains in "pending" status for worker to process
+		log.Printf("[API] App creation completed successfully - App ID: %s, Deployment ID: %d", app.ID, deployment.ID)
 		respondJSON(w, http.StatusCreated, map[string]interface{}{
 			"app":        app,
 			"deployment": deployment,
@@ -247,15 +290,19 @@ func getApp(appStore *apps.Store, deploymentStore *deployments.Store) http.Handl
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid app ID: %s", chi.URLParam(r, "id"))
 			respondError(w, http.StatusBadRequest, "Invalid app ID")
 			return
 		}
 
+		log.Printf("[API] GET /api/v1/apps/%d - Fetching app", id)
 		app, err := appStore.GetByID(id)
 		if err != nil {
+			log.Printf("[API] ERROR - App not found: %d", id)
 			respondError(w, http.StatusNotFound, "App not found")
 			return
 		}
+		log.Printf("[API] App found - ID: %d, Name: %s, Status: %s", id, app.Name, app.Status)
 
 		// Get the latest deployment for this app
 		appDeployments, err := deploymentStore.ListByAppID(id)
@@ -306,20 +353,26 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid app ID: %s", chi.URLParam(r, "id"))
 			respondError(w, http.StatusBadRequest, "Invalid app ID")
 			return
 		}
 
+		log.Printf("[API] POST /api/v1/apps/%d/redeploy - Initiating redeployment", id)
+
 		// Get the app
 		app, err := appStore.GetByID(id)
 		if err != nil {
+			log.Printf("[API] ERROR - App not found: %d", id)
 			respondError(w, http.StatusNotFound, "App not found")
 			return
 		}
+		log.Printf("[API] App found - ID: %d, Name: %s", id, app.Name)
 
 		// Create new deployment
 		appID, err := strconv.Atoi(app.ID)
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid app ID format: %v", err)
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
 				"error": fmt.Sprintf("Invalid app ID format: %v", err),
 				"app":   app,
@@ -327,18 +380,21 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 			return
 		}
 
+		log.Printf("[API] Creating new deployment for app ID: %d", appID)
 		deployment, err := deploymentStore.Create(appID)
 		if err != nil {
+			log.Printf("[API] ERROR - Failed to create deployment: %v", err)
 			respondJSON(w, http.StatusInternalServerError, map[string]interface{}{
 				"error": fmt.Sprintf("Failed to create deployment: %v", err),
 				"app":   app,
 			})
 			return
 		}
+		log.Printf("[API] Deployment created - ID: %d", deployment.ID)
 		
 		// Update app status to "Pending" when redeployment is initiated
 		if err := appStore.UpdateStatus(appID, "Pending"); err != nil {
-			log.Printf("Warning: failed to update app status to Pending: %v", err)
+			log.Printf("[API] WARNING - Failed to update app status to Pending: %v", err)
 		}
 
 		// Validate repository has Dockerfile
@@ -351,8 +407,10 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 			branch = "main"
 		}
 
+		log.Printf("[API] Validating repository - Cloning %s (branch: %s)", app.RepoURL, branch)
 		repoPath, err := cloner.Clone(app.RepoURL, tempDeploymentID, branch)
 		if err != nil {
+			log.Printf("[API] ERROR - Git clone failed: %v", err)
 			// Update deployment with error
 			errorMsg := fmt.Sprintf("Failed to clone repository: %v", err)
 			deploymentStore.UpdateError(deployment.ID, errorMsg)
@@ -367,9 +425,12 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 			})
 			return
 		}
+		log.Printf("[API] Repository cloned successfully")
 
 		// Check if Dockerfile exists
+		log.Printf("[API] Checking for Dockerfile...")
 		if err := gitrepo.CheckDockerfile(repoPath); err != nil {
+			log.Printf("[API] ERROR - Dockerfile not found: %v", err)
 			// Clean up cloned repository
 			os.RemoveAll(repoPath)
 			// Update deployment with error
@@ -388,9 +449,11 @@ func redeployApp(appStore *apps.Store, deploymentStore *deployments.Store, clone
 		}
 
 		// Clean up validation repository
+		log.Printf("[API] Cleaning up validation repository...")
 		os.RemoveAll(repoPath)
 
 		// Deployment created successfully, will be processed by worker
+		log.Printf("[API] Redeployment initiated successfully - Deployment ID: %d", deployment.ID)
 		respondJSON(w, http.StatusCreated, map[string]interface{}{
 			"message":    "Redeployment initiated",
 			"app":        app,
@@ -403,15 +466,19 @@ func deleteApp(store *apps.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid app ID: %s", chi.URLParam(r, "id"))
 			respondError(w, http.StatusBadRequest, "Invalid app ID")
 			return
 		}
 
+		log.Printf("[API] DELETE /api/v1/apps/%d - Deleting app", id)
 		if err := store.Delete(id); err != nil {
+			log.Printf("[API] ERROR - Failed to delete app: %v", err)
 			respondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
+		log.Printf("[API] App deleted successfully - ID: %d", id)
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
@@ -420,16 +487,20 @@ func listDeployments(store *deployments.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		appID, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid app ID: %s", chi.URLParam(r, "id"))
 			respondError(w, http.StatusBadRequest, "Invalid app ID")
 			return
 		}
 
+		log.Printf("[API] GET /api/v1/apps/%d/deployments - Listing deployments", appID)
 		deployments, err := store.ListByAppID(appID)
 		if err != nil {
+			log.Printf("[API] ERROR - Failed to list deployments: %v", err)
 			respondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
+		log.Printf("[API] Successfully listed %d deployment(s) for app %d", len(deployments), appID)
 		respondJSON(w, http.StatusOK, deployments)
 	}
 }
@@ -438,15 +509,19 @@ func getDeployment(store *deployments.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid deployment ID: %s", chi.URLParam(r, "id"))
 			respondError(w, http.StatusBadRequest, "Invalid deployment ID")
 			return
 		}
 
+		log.Printf("[API] GET /api/v1/deployments/%d - Fetching deployment", id)
 		deployment, err := store.GetByID(id)
 		if err != nil {
+			log.Printf("[API] ERROR - Deployment not found: %d", id)
 			respondError(w, http.StatusNotFound, "Deployment not found")
 			return
 		}
+		log.Printf("[API] Deployment found - ID: %d, Status: %s", id, deployment.Status)
 
 		respondJSON(w, http.StatusOK, deployment)
 	}
@@ -456,15 +531,19 @@ func getDeploymentLogs(store *deployments.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
+			log.Printf("[API] ERROR - Invalid deployment ID: %s", chi.URLParam(r, "id"))
 			respondError(w, http.StatusBadRequest, "Invalid deployment ID")
 			return
 		}
 
+		log.Printf("[API] GET /api/v1/deployments/%d/logs - Fetching deployment logs", id)
 		deployment, err := store.GetByID(id)
 		if err != nil {
+			log.Printf("[API] ERROR - Deployment not found: %d", id)
 			respondError(w, http.StatusNotFound, "Deployment not found")
 			return
 		}
+		log.Printf("[API] Deployment logs retrieved - ID: %d, Has build log: %v", id, deployment.BuildLog.Valid)
 
 		// Build response with logs
 		response := map[string]interface{}{
