@@ -39,9 +39,12 @@ export default function AppDetailsPage() {
   const loadDeployments = async () => {
     try {
       const data = await appsApi.getDeployments(appId);
-      setDeployments(data);
+      // Ensure data is always an array, never null or undefined
+      setDeployments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading deployments:', err);
+      // Set empty array on error to prevent null reference
+      setDeployments([]);
     }
   };
 
@@ -191,7 +194,7 @@ export default function AppDetailsPage() {
 
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Deployments</h2>
-          {deployments.length === 0 ? (
+          {deployments && deployments.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-8 text-center">
               <p className="text-gray-600">No deployments found</p>
             </div>

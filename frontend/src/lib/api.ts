@@ -48,7 +48,9 @@ export const appsApi = {
   // List all apps
   list: async (): Promise<App[]> => {
     const response = await safeFetch(API_ENDPOINTS.apps);
-    return handleResponse<App[]>(response);
+    const data = await handleResponse<App[]>(response);
+    // Ensure we always return an array
+    return Array.isArray(data) ? data : [];
   },
 
   // Get app by ID
@@ -91,7 +93,9 @@ export const appsApi = {
   // Get deployments for an app
   getDeployments: async (id: string | number): Promise<Deployment[]> => {
     const response = await safeFetch(`${API_ENDPOINTS.apps}/${id}/deployments`);
-    return handleResponse<Deployment[]>(response);
+    const data = await handleResponse<Deployment[]>(response);
+    // Ensure we always return an array
+    return Array.isArray(data) ? data : [];
   },
 };
 

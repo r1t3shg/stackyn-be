@@ -35,11 +35,14 @@ export default function Home() {
       console.log('Loading apps from:', `${API_BASE_URL}/api/v1/apps`);
       const data = await appsApi.list();
       console.log('Apps loaded successfully:', data);
-      setApps(data);
+      // Ensure data is always an array, never null or undefined
+      setApps(Array.isArray(data) ? data : []);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load apps';
       setError(errorMessage);
       console.error('Error loading apps:', err);
+      // Set empty array on error to prevent null reference
+      setApps([]);
     } finally {
       setLoading(false);
     }
@@ -105,7 +108,7 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && !error && apps.length === 0 && (
+        {!loading && !error && apps && apps.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <p className="text-gray-600 mb-4">No applications found</p>
             <Link
@@ -117,7 +120,7 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && !error && apps.length > 0 && (
+        {!loading && !error && apps && apps.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
               <AppCard key={app.id} app={app} />
