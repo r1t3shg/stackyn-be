@@ -47,7 +47,7 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 		"traefik.http.routers." + routerName + ".rule":                       fmt.Sprintf("Host(`%s`)", fqdn),
 		"traefik.http.routers." + routerName + ".entrypoints":                "websecure",
 		"traefik.http.routers." + routerName + ".tls":                        "true",
-		"traefik.http.routers." + routerName + ".tls.certresolver":           "le",
+		"traefik.http.routers." + routerName + ".tls.certresolver":           "letsencrypt",
 		"traefik.http.services." + serviceName + ".loadbalancer.server.port": strconv.Itoa(internalPort),
 	}
 
