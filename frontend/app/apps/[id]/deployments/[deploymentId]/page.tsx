@@ -148,14 +148,14 @@ export default function DeploymentDetailsPage() {
         </div>
 
         <div className="space-y-6">
-          {extractString(logs?.build_log) && (
+          {logs && extractString(logs.build_log) && (
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-4">Build Logs</h2>
               <LogsViewer logs={extractString(logs.build_log)} title="Build Logs" />
             </div>
           )}
 
-          {!extractString(logs?.build_log) && (
+          {(!logs || !extractString(logs.build_log)) && (
             <div className="bg-white rounded-lg shadow-md p-8 text-center">
               <p className="text-gray-600">No build logs available yet</p>
             </div>

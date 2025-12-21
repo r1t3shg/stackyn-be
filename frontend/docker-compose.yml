@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stackyn-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=https://staging.stackyn.com
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - stackyn-network
+
+networks:
+  stackyn-network:
+    driver: bridge
+
