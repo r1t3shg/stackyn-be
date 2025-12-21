@@ -12,27 +12,32 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 // Helper to handle fetch errors with better messages
 async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
-  // Log the request in development
-  if (import.meta.env.DEV) {
-    console.log('Making API request to:', url, options ? `Method: ${options.method || 'GET'}` : '');
-  }
+  // Always log requests for debugging
+  console.log('Making API request to:', url, options ? `Method: ${options.method || 'GET'}` : '');
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(url, {
       ...options,
       // Ensure credentials are not sent (for CORS)
       credentials: 'omit',
+      signal: controller.signal,
     });
     
-    if (import.meta.env.DEV) {
-      console.log('API response status:', response.status, response.statusText);
-    }
+    clearTimeout(timeoutId);
+    
+    console.log('API response status:', response.status, response.statusText);
     
     return response;
   } catch (err) {
     console.error('Fetch error:', err);
     if (err instanceof TypeError && err.message === 'Failed to fetch') {
-      throw new Error(`Cannot connect to backend API at ${url}. Make sure the backend server is running on port 8080 and CORS is enabled.`);
+      throw new Error(`Cannot connect to backend API at ${url}. Make sure the backend server is running and accessible.`);
+    }
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error(`Request to ${url} timed out after 10 seconds.`);
     }
     throw err;
   }
