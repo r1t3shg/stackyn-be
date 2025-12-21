@@ -20,3 +20,4 @@ export default function LogsViewer({ logs, title = 'Logs' }: LogsViewerProps) {
   );
 }
 
+

@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Traefik - Reverse Proxy and Load Balancer
+  traefik:
+    image: traefik:v3.0
+    container_name: stackyn-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard (only for development)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/acme:/etc/traefik/acme:ro
+    networks:
+      - stackyn-network
+    labels:
+      - "traefik.enable=true"
+      # Traefik dashboard (disable in production or add authentication)
+      # - "traefik.http.routers.traefik.rule=Host(`traefik.stackyn.local`) || Host(`traefik.staging.stackyn.com`)"
+      # - "traefik.http.routers.traefik.entrypoints=websecure"
+      # - "traefik.http.routers.traefik.service=api@internal"
+      # - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+    environment:
+      - TRAEFIK_LOG_LEVEL=INFO
+
+  # Frontend - React (Vite) Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=https://api.staging.stackyn.com
+    container_name: stackyn-frontend
+    restart: unless-stopped
+    networks:
+      - stackyn-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`stackyn.local`) || Host(`staging.stackyn.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.service=frontend"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    depends_on:
+      - backend
+
+  # Backend - Go API Server
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: stackyn-backend
+    restart: unless-stopped
+    networks:
+      - stackyn-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./backend/config/prod.env:/app/.env:ro
+      - ./volumes/db:/app/data/db:rw
+      - ./volumes/logs:/app/data/logs:rw
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgres://user:password@postgres:5432/stackyn?sslmode=disable}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - BASE_DOMAIN=${BASE_DOMAIN:-staging.stackyn.com}
+      - PORT=8080
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.stackyn.local`) || Host(`api.staging.stackyn.com`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.service=backend"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+    depends_on:
+      - postgres
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: stackyn-postgres
+    restart: unless-stopped
+    networks:
+      - stackyn-network
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data:rw
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-stackyn}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-stackyn}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stackyn}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  stackyn-network:
+    driver: bridge
+    name: stackyn-network
+

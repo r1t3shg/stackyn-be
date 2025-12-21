@@ -13,20 +13,24 @@ RUN npm ci
 COPY . .
 
 # Build the application
-ENV VITE_API_BASE_URL=https://staging.stackyn.com
+# Note: VITE_API_BASE_URL should be set at build time via build arg
+ARG VITE_API_BASE_URL=https://staging.stackyn.com
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
+# Production stage with simple static server
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install serve globally for serving static files
+RUN npm install -g serve
 
 # Copy built files from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist ./dist
 
 # Expose port
-EXPOSE 80
+EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start serve with SPA routing support
+CMD ["serve", "-s", "dist", "-l", "3000"]
