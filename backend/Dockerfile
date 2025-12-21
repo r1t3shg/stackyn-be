@@ -16,6 +16,9 @@ RUN go mod download
 # Copy the rest of the source code
 COPY . .
 
+# Update go.sum for any replace directives
+RUN go mod tidy
+
 # Build the API and worker binaries for Linux
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
    go build -o bin/api ./cmd/api && \
