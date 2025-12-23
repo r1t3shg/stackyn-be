@@ -114,6 +114,14 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 		return fmt.Errorf("dockerfile check failed: %w", err)
 	}
 
+	// Ensure package-lock.json exists if package.json is present
+	// This fixes the issue where Dockerfiles use `npm ci` but package-lock.json is missing
+	log.Printf("[ENGINE] Step 3.5: Ensuring package-lock.json exists...")
+	if err := gitrepo.EnsurePackageLock(repoPath); err != nil {
+		log.Printf("[ENGINE] WARNING - Failed to ensure package-lock.json: %v (continuing anyway)", err)
+		// Don't fail the deployment - let Docker build handle it
+	}
+
 	// Step 2: Build Docker image
 	imageName := fmt.Sprintf("mvp-%s:%d", strings.ToLower(app.Name), deploymentID)
 	log.Printf("[ENGINE] Step 4: Building Docker image: %s", imageName)
