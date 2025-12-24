@@ -183,6 +183,14 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	containerID, err := e.runner.Run(ctx, builtImage, subdomain, e.baseDomain, deployment.AppID, deploymentID, detectedPort)
 	if err != nil {
 		log.Printf("[ENGINE] ERROR - Container run failed: %v", err)
+		// Delete the built image since container failed to start
+		log.Printf("[ENGINE] Deleting image %s since container failed to start", builtImage)
+		if imageErr := e.runner.RemoveImage(ctx, builtImage); imageErr != nil {
+			log.Printf("[ENGINE] WARNING - Failed to delete image %s: %v", builtImage, imageErr)
+		} else {
+			log.Printf("[ENGINE] Image deleted successfully: %s", builtImage)
+		}
+		
 		// Capture detailed error message for deployment record
 		errorMsg := fmt.Sprintf("Container run failed: %v", err)
 		e.deploymentStore.UpdateError(deploymentID, errorMsg)
@@ -210,13 +218,24 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 		log.Printf("[ENGINE] ERROR - New container health check failed at %s", appURL)
 		log.Printf("[ENGINE] New container failed to respond - keeping old containers running")
 		
-		// Clean up the failed new container
+		// Clean up the failed new container and its image
 		log.Printf("[ENGINE] Cleaning up failed new container: %s", containerID)
 		if stopErr := e.runner.Stop(ctx, containerID); stopErr != nil {
 			log.Printf("[ENGINE] WARNING - Failed to stop failed container %s: %v", containerID, stopErr)
 		}
 		if removeErr := e.runner.Remove(ctx, containerID); removeErr != nil {
 			log.Printf("[ENGINE] WARNING - Failed to remove failed container %s: %v", containerID, removeErr)
+		}
+		
+		// Delete the associated Docker image
+		if deployment.ImageName.Valid && deployment.ImageName.String != "" {
+			imageName := deployment.ImageName.String
+			log.Printf("[ENGINE] Deleting failed container's image: %s", imageName)
+			if imageErr := e.runner.RemoveImage(ctx, imageName); imageErr != nil {
+				log.Printf("[ENGINE] WARNING - Failed to delete image %s: %v", imageName, imageErr)
+			} else {
+				log.Printf("[ENGINE] Failed container's image deleted successfully: %s", imageName)
+			}
 		}
 		
 		// Mark deployment as failed
@@ -278,6 +297,17 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 					log.Printf("[ENGINE] WARNING - Failed to remove previous container %s: %v", prevContainerID, removeErr)
 				} else {
 					log.Printf("[ENGINE] Previous container removed: %s", prevContainerID)
+				}
+			}
+			
+			// Delete the associated Docker image if it exists
+			if prevDeployment.ImageName.Valid && prevDeployment.ImageName.String != "" {
+				imageName := prevDeployment.ImageName.String
+				log.Printf("[ENGINE] Deleting associated image: %s (deployment %d)", imageName, prevDeployment.ID)
+				if imageErr := e.runner.RemoveImage(ctx, imageName); imageErr != nil {
+					log.Printf("[ENGINE] WARNING - Failed to delete image %s: %v", imageName, imageErr)
+				} else {
+					log.Printf("[ENGINE] Image deleted successfully: %s", imageName)
 				}
 			}
 			
