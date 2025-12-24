@@ -120,14 +120,18 @@ func ParseRuntimeLog(reader io.ReadCloser) (string, error) {
 		offset += int(size)
 
 		// Convert message to string and split by newlines
+		// Docker logs can contain both stdout (stream=1) and stderr (stream=2)
+		// console.log in Node.js writes to stdout, so stream will be 1
 		messageStr := string(message)
 		lines := strings.Split(messageStr, "\n")
 		for _, line := range lines {
 			line = strings.TrimRight(line, "\r")
-			// Add stream prefix for stderr
+			// Only add prefix for stderr (stream=2), stdout (stream=1) and stdin (stream=0) are displayed as-is
+			// This ensures console.log output (stdout) appears cleanly without prefixes
 			if stream == 2 {
 				line = "[stderr] " + line
 			}
+			// Skip empty lines but include all non-empty log lines (including stdout from console.log)
 			if line != "" {
 				logLines = append(logLines, line)
 			}

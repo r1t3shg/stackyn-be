@@ -728,18 +728,23 @@ func getDeploymentLogs(store *deployments.Store, runner *dockerrun.Runner) http.
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			
-			log.Printf("[API] Fetching fresh runtime logs from container %s", deployment.ContainerID.String)
+			log.Printf("[API] Fetching fresh runtime logs from container %s (includes stdout/stderr from application)", deployment.ContainerID.String)
+			// Fetch all logs (up to last 500 lines) to include console.log output from the application
 			runtimeLogReader, fetchErr := runner.GetLogs(ctx, deployment.ContainerID.String, "500")
 			if fetchErr == nil {
 				parsedLog, parseErr := logs.ParseRuntimeLog(runtimeLogReader)
-				if parseErr == nil && parsedLog != "" {
-					runtimeLog = parsedLog
-					// Update the database with fresh logs
-					if updateErr := store.UpdateRuntimeLog(id, runtimeLog); updateErr != nil {
-						log.Printf("[API] WARNING - Failed to update runtime log in database: %v", updateErr)
+				if parseErr == nil {
+					if parsedLog != "" {
+						runtimeLog = parsedLog
+						// Update the database with fresh logs
+						if updateErr := store.UpdateRuntimeLog(id, runtimeLog); updateErr != nil {
+							log.Printf("[API] WARNING - Failed to update runtime log in database: %v", updateErr)
+						}
+						log.Printf("[API] Fresh runtime logs fetched successfully (length: %d chars, contains application stdout/stderr)", len(runtimeLog))
+					} else {
+						log.Printf("[API] Runtime logs are empty (container may not have produced any output yet)")
 					}
-					log.Printf("[API] Fresh runtime logs fetched successfully (length: %d)", len(runtimeLog))
-				} else if parseErr != nil {
+				} else {
 					log.Printf("[API] WARNING - Failed to parse fresh runtime logs: %v", parseErr)
 				}
 			} else {
