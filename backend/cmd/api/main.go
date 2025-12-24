@@ -521,62 +521,77 @@ func deleteApp(appStore *apps.Store, deploymentStore *deployments.Store, runner 
 
 		log.Printf("[API] DELETE /api/v1/apps/%d - Deleting app and cleaning up resources", id)
 
-		// Get all deployments for this app
+		// Use request context for cleanup operations
+		// If request context is cancelled, use background context as fallback
+		ctx := r.Context()
+		if ctx.Err() != nil {
+			ctx = context.Background()
+		}
+
+		// Step 1: Get all deployments for this app
 		appDeployments, err := deploymentStore.ListByAppID(id)
 		if err != nil {
 			log.Printf("[API] WARNING - Failed to list deployments for app %d: %v", id, err)
 			// Continue with deletion even if we can't list deployments
 		} else {
-			log.Printf("[API] Found %d deployment(s) for app %d, cleaning up containers and images...", len(appDeployments), id)
+			log.Printf("[API] Found %d deployment(s) for app %d", len(appDeployments), id)
 			
-			// Use request context for cleanup operations
-			// If request context is cancelled, use background context as fallback
-			ctx := r.Context()
-			if ctx.Err() != nil {
-				ctx = context.Background()
-			}
-			// Clean up each deployment's containers and images
+			// Step 2: Stop all Docker containers first
+			log.Printf("[API] Step 1: Stopping all Docker containers...")
 			for i := range appDeployments {
 				deployment := appDeployments[i]
-				// Stop and remove container if it exists
 				if deployment.ContainerID.Valid && deployment.ContainerID.String != "" {
 					containerID := deployment.ContainerID.String
-					log.Printf("[API] Stopping and removing container: %s", containerID)
+					log.Printf("[API] Stopping container: %s", containerID)
 					
-					// Try to stop the container (ignore error if already stopped)
+					// Stop the container (ignore error if already stopped)
 					if stopErr := runner.Stop(ctx, containerID); stopErr != nil {
 						log.Printf("[API] WARNING - Failed to stop container %s: %v (may already be stopped)", containerID, stopErr)
+					} else {
+						log.Printf("[API] Container stopped successfully: %s", containerID)
 					}
+				}
+			}
+			
+			// Step 3: Remove all containers (after they're stopped)
+			log.Printf("[API] Step 1.5: Removing all Docker containers...")
+			for i := range appDeployments {
+				deployment := appDeployments[i]
+				if deployment.ContainerID.Valid && deployment.ContainerID.String != "" {
+					containerID := deployment.ContainerID.String
+					log.Printf("[API] Removing container: %s", containerID)
 					
-					// Remove the container
 					if removeErr := runner.Remove(ctx, containerID); removeErr != nil {
 						log.Printf("[API] WARNING - Failed to remove container %s: %v", containerID, removeErr)
 					} else {
 						log.Printf("[API] Container removed successfully: %s", containerID)
 					}
 				}
-				
-				// Remove Docker image if it exists
+			}
+			
+			// Step 4: Delete all Docker images (after containers are stopped and removed)
+			log.Printf("[API] Step 2: Deleting all Docker images...")
+			for i := range appDeployments {
+				deployment := appDeployments[i]
 				if deployment.ImageName.Valid && deployment.ImageName.String != "" {
 					imageName := deployment.ImageName.String
-					log.Printf("[API] Removing Docker image: %s", imageName)
+					log.Printf("[API] Deleting Docker image: %s", imageName)
 					
 					if imageErr := runner.RemoveImage(ctx, imageName); imageErr != nil {
-						log.Printf("[API] WARNING - Failed to remove image %s: %v", imageName, imageErr)
+						log.Printf("[API] WARNING - Failed to delete image %s: %v", imageName, imageErr)
 					} else {
-						log.Printf("[API] Image removed successfully: %s", imageName)
+						log.Printf("[API] Image deleted successfully: %s", imageName)
 					}
 				}
 			}
 			
-			// Note: Deployments will be deleted via CASCADE when app is deleted
-			// No explicit deletion needed as database foreign key handles it
-			log.Printf("[API] Deployments will be deleted via CASCADE when app is deleted")
+			log.Printf("[API] Docker cleanup completed for app %d", id)
 		}
 
-		// Finally, delete the app (this will cascade delete deployments if foreign key is set up)
+		// Step 5: Finally, delete the app from PostgreSQL database (this will cascade delete deployments)
+		log.Printf("[API] Step 3: Removing app entry from PostgreSQL database...")
 		if err := appStore.Delete(id); err != nil {
-			log.Printf("[API] ERROR - Failed to delete app: %v", err)
+			log.Printf("[API] ERROR - Failed to delete app from database: %v", err)
 			respondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
