@@ -78,6 +78,7 @@ func ParseRuntimeLog(reader io.ReadCloser) (string, error) {
 	for offset < len(data) {
 		// Need at least 8 bytes for header
 		if offset+8 > len(data) {
+			// Not enough data for a complete header, skip remaining bytes
 			break
 		}
 
@@ -89,12 +90,32 @@ func ParseRuntimeLog(reader io.ReadCloser) (string, error) {
 
 		offset += 8 // Move past header
 
-		// Read the message
-		if offset+int(size) > len(data) {
-			// Not enough data, break
+		// Validate size to prevent reading beyond data bounds
+		if size == 0 {
+			// Empty message, skip
+			continue
+		}
+		
+		if size > uint32(len(data)-offset) {
+			// Size is larger than remaining data, this is likely corrupted
+			// Try to read what we can and break
+			if offset < len(data) {
+				remaining := data[offset:]
+				messageStr := string(remaining)
+				if strings.TrimSpace(messageStr) != "" {
+					line := strings.TrimRight(messageStr, "\r\n")
+					if stream == 2 {
+						line = "[stderr] " + line
+					}
+					if line != "" {
+						logLines = append(logLines, line)
+					}
+				}
+			}
 			break
 		}
 
+		// Read the message
 		message := data[offset : offset+int(size)]
 		offset += int(size)
 

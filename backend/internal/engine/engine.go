@@ -344,10 +344,15 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 		if parseErr != nil {
 			log.Printf("[ENGINE] WARNING - Failed to parse runtime logs: %v (continuing anyway)", parseErr)
 		} else {
-			if updateErr := e.deploymentStore.UpdateRuntimeLog(deploymentID, runtimeLog); updateErr != nil {
-				log.Printf("[ENGINE] WARNING - Failed to update runtime log: %v (continuing anyway)", updateErr)
+			// Only store logs if they're not empty
+			if runtimeLog != "" {
+				if updateErr := e.deploymentStore.UpdateRuntimeLog(deploymentID, runtimeLog); updateErr != nil {
+					log.Printf("[ENGINE] WARNING - Failed to update runtime log: %v (continuing anyway)", updateErr)
+				} else {
+					log.Printf("[ENGINE] Runtime logs captured and stored successfully (length: %d)", len(runtimeLog))
+				}
 			} else {
-				log.Printf("[ENGINE] Runtime logs captured and stored successfully")
+				log.Printf("[ENGINE] Runtime logs are empty, skipping storage")
 			}
 		}
 	}

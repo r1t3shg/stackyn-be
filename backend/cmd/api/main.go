@@ -40,6 +40,7 @@ import (
 	"mvp-be/internal/deployments"
 	"mvp-be/internal/dockerrun"
 	"mvp-be/internal/gitrepo"
+	"mvp-be/internal/logs"
 )
 
 // contextKey is a type for context keys to avoid collisions
@@ -162,7 +163,7 @@ func main() {
 		// Deployments endpoints
 		r.Route("/deployments", func(r chi.Router) {
 			r.Get("/{id}", getDeployment(deploymentStore))
-			r.Get("/{id}/logs", getDeploymentLogs(deploymentStore))
+			r.Get("/{id}/logs", getDeploymentLogs(deploymentStore, runner))
 		})
 	})
 
@@ -689,7 +690,7 @@ func getDeployment(store *deployments.Store) http.HandlerFunc {
 	}
 }
 
-func getDeploymentLogs(store *deployments.Store) http.HandlerFunc {
+func getDeploymentLogs(store *deployments.Store, runner *dockerrun.Runner) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
@@ -720,8 +721,36 @@ func getDeploymentLogs(store *deployments.Store) http.HandlerFunc {
 			response["build_log"] = nil
 		}
 
-		// Add runtime log if available
-		if deployment.RuntimeLog.Valid && deployment.RuntimeLog.String != "" {
+		// For runtime logs, try to fetch fresh logs from Docker if container is running
+		runtimeLog := ""
+		if deployment.Status == deployments.StatusRunning && deployment.ContainerID.Valid && deployment.ContainerID.String != "" {
+			// Try to fetch fresh runtime logs from Docker
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			
+			log.Printf("[API] Fetching fresh runtime logs from container %s", deployment.ContainerID.String)
+			runtimeLogReader, fetchErr := runner.GetLogs(ctx, deployment.ContainerID.String, "500")
+			if fetchErr == nil {
+				parsedLog, parseErr := logs.ParseRuntimeLog(runtimeLogReader)
+				if parseErr == nil && parsedLog != "" {
+					runtimeLog = parsedLog
+					// Update the database with fresh logs
+					if updateErr := store.UpdateRuntimeLog(id, runtimeLog); updateErr != nil {
+						log.Printf("[API] WARNING - Failed to update runtime log in database: %v", updateErr)
+					}
+					log.Printf("[API] Fresh runtime logs fetched successfully (length: %d)", len(runtimeLog))
+				} else if parseErr != nil {
+					log.Printf("[API] WARNING - Failed to parse fresh runtime logs: %v", parseErr)
+				}
+			} else {
+				log.Printf("[API] WARNING - Failed to fetch fresh runtime logs: %v", fetchErr)
+			}
+		}
+		
+		// Use fresh logs if available, otherwise fall back to stored logs
+		if runtimeLog != "" {
+			response["runtime_log"] = runtimeLog
+		} else if deployment.RuntimeLog.Valid && deployment.RuntimeLog.String != "" {
 			response["runtime_log"] = deployment.RuntimeLog.String
 		} else {
 			response["runtime_log"] = nil
