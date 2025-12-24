@@ -216,24 +216,31 @@ func fixDockerfileNpmCi(repoPath, dockerfilePath string) error {
 	return nil
 }
 
-// DetectPortFromDockerfile attempts to detect the port from the Dockerfile's EXPOSE directive.
-// Returns the first port found, or 8080 as default if no EXPOSE directive is found.
+// DetectPortFromDockerfile attempts to detect the port from the Dockerfile's EXPOSE directive,
+// ENV PORT variable, or by checking package.json and source files for Node.js apps.
+// Returns the first port found, or attempts to detect from common patterns, or 8080 as default.
 func DetectPortFromDockerfile(repoPath string) int {
 	dockerfilePath := filepath.Join(repoPath, "Dockerfile")
 	
 	file, err := os.Open(dockerfilePath)
 	if err != nil {
-		log.Printf("[GIT] WARNING - Failed to open Dockerfile for port detection: %v, using default port 8080", err)
-		return 8080
+		log.Printf("[GIT] WARNING - Failed to open Dockerfile for port detection: %v, trying alternative methods", err)
+		return detectPortFromPackageJSON(repoPath)
 	}
 	defer file.Close()
 
-	// Regex to match EXPOSE directive: EXPOSE 3000, EXPOSE 8080, EXPOSE 5000:8080, etc.
+	// Regex patterns for port detection
 	exposeRegex := regexp.MustCompile(`(?i)^\s*EXPOSE\s+(\d+)`)
+	envPortRegex := regexp.MustCompile(`(?i)^\s*ENV\s+PORT\s*=\s*(\d+)`)
 	
 	scanner := bufio.NewScanner(file)
+	var detectedPort int
+	foundExpose := false
+	
 	for scanner.Scan() {
 		line := scanner.Text()
+		
+		// First, check for EXPOSE directive (highest priority)
 		matches := exposeRegex.FindStringSubmatch(line)
 		if len(matches) > 1 {
 			port, err := strconv.Atoi(matches[1])
@@ -242,13 +249,115 @@ func DetectPortFromDockerfile(repoPath string) int {
 				return port
 			}
 		}
+		
+		// Check for ENV PORT=3000 (common in Node.js apps)
+		if !foundExpose {
+			envMatches := envPortRegex.FindStringSubmatch(line)
+			if len(envMatches) > 1 {
+				port, err := strconv.Atoi(envMatches[1])
+				if err == nil && port > 0 && port < 65536 {
+					detectedPort = port
+					log.Printf("[GIT] Detected port %d from Dockerfile ENV PORT directive", port)
+				}
+			}
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Printf("[GIT] WARNING - Error reading Dockerfile: %v, using default port 8080", err)
+		log.Printf("[GIT] WARNING - Error reading Dockerfile: %v, trying alternative methods", err)
+		return detectPortFromPackageJSON(repoPath)
+	}
+
+	// If we detected a port from ENV PORT, use it
+	if detectedPort > 0 {
+		return detectedPort
+	}
+
+	// No EXPOSE or ENV PORT found, try detecting from package.json or source files
+	log.Printf("[GIT] No EXPOSE or ENV PORT found in Dockerfile, checking package.json and source files...")
+	return detectPortFromPackageJSON(repoPath)
+}
+
+// detectPortFromPackageJSON attempts to detect port from package.json scripts or source files
+func detectPortFromPackageJSON(repoPath string) int {
+	packageJSONPath := filepath.Join(repoPath, "package.json")
+	
+	// Check if package.json exists
+	if _, err := os.Stat(packageJSONPath); os.IsNotExist(err) {
+		log.Printf("[GIT] No package.json found, using default port 8080")
 		return 8080
 	}
 
-	log.Printf("[GIT] No EXPOSE directive found in Dockerfile, using default port 8080")
+	// Read package.json to check for Node.js app
+	file, err := os.Open(packageJSONPath)
+	if err != nil {
+		log.Printf("[GIT] Failed to read package.json: %v, using default port 8080", err)
+		return 8080
+	}
+	defer file.Close()
+
+	// Check for common Node.js entry points
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.ToLower(scanner.Text())
+		// Check for "main" field pointing to server.js, app.js, index.js, etc.
+		if strings.Contains(line, `"main"`) || strings.Contains(line, `"start"`) {
+			// This is likely a Node.js app, default to 3000 (common for Express)
+			log.Printf("[GIT] Detected Node.js app from package.json, using default port 3000")
+			return 3000
+		}
+	}
+
+	// Check source files for port patterns (server.js, app.js, index.js)
+	commonEntryPoints := []string{"server.js", "app.js", "index.js", "main.js"}
+	for _, entryPoint := range commonEntryPoints {
+		sourcePath := filepath.Join(repoPath, entryPoint)
+		if _, err := os.Stat(sourcePath); err == nil {
+			// File exists, check for port patterns
+			port := detectPortFromSourceFile(sourcePath)
+			if port > 0 {
+				return port
+			}
+			// If it's a Node.js file but no port found, default to 3000
+			log.Printf("[GIT] Found Node.js entry point %s, using default port 3000", entryPoint)
+			return 3000
+		}
+	}
+
+	log.Printf("[GIT] No port detected from package.json or source files, using default port 8080")
 	return 8080
+}
+
+// detectPortFromSourceFile attempts to detect port from source code patterns
+func detectPortFromSourceFile(filePath string) int {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+
+	// Common port patterns in Node.js: PORT || 3000, listen(3000), port: 3000
+	portPatterns := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)PORT\s*\|\|\s*(\d+)`),           // PORT || 3000
+		regexp.MustCompile(`(?i)\.listen\((\d+)`),                // app.listen(3000
+		regexp.MustCompile(`(?i)port\s*[:=]\s*(\d+)`),            // port: 3000 or port = 3000
+		regexp.MustCompile(`(?i)process\.env\.PORT\s*\|\|\s*(\d+)`), // process.env.PORT || 3000
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		for _, pattern := range portPatterns {
+			matches := pattern.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				port, err := strconv.Atoi(matches[1])
+				if err == nil && port > 0 && port < 65536 {
+					log.Printf("[GIT] Detected port %d from source file %s", port, filepath.Base(filePath))
+					return port
+				}
+			}
+		}
+	}
+
+	return 0
 }
