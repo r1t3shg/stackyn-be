@@ -229,7 +229,7 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 	
 	// Wait a moment for the container to initialize
 	// Then check if it's still running (basic health check)
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	
 	// Check container status
 	containerInfo, err := r.client.ContainerInspect(ctx, resp.ID)
@@ -256,28 +256,20 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 		}
 		log.Printf("[DOCKER] Container health check passed - Status: %s", containerInfo.State.Status)
 		
-		// Check container logs to verify the app is listening on the expected port
-		// This helps catch cases where port detection failed
+		// Check container logs to verify it's a web server, not a worker
 		logsReader, logsErr := r.client.ContainerLogs(ctx, resp.ID, container.LogsOptions{
 			ShowStdout: true,
 			ShowStderr: true,
-			Tail:       "20", // Just check last 20 lines for port info
+			Tail:       "30",
 		})
 		if logsErr == nil {
 			defer logsReader.Close()
 			logsData, _ := io.ReadAll(logsReader)
 			if len(logsData) > 0 {
 				logsStr := string(logsData)
-				log.Printf("[DOCKER] Container startup logs (last 20 lines): %s", logsStr)
-				// Log a warning if we see common port patterns that don't match our detected port
-				// This helps debug port mismatches
-				if internalPort == 8080 {
-					// Check for common alternative ports in logs
-					if containsPort(logsStr, "8000") {
-						log.Printf("[DOCKER] WARNING - Container logs mention port 8000, but Traefik is configured for 8080. This may cause 502 errors.")
-					} else if containsPort(logsStr, "5000") {
-						log.Printf("[DOCKER] WARNING - Container logs mention port 5000, but Traefik is configured for 8080. This may cause 502 errors.")
-					}
+				// Check if this is a worker app based on logs
+				if isWorkerAppFromLogs(logsStr) {
+					return "", fmt.Errorf("worker apps are not supported yet. Stackyn currently supports only HTTP-based applications that expose a port and serve web requests. Your app does not appear to start a web server. What you can do: • Deploy an API or web app that listens on a port • Wait for background worker support (coming soon)")
 				}
 			}
 		}
@@ -286,24 +278,57 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 	return resp.ID, nil
 }
 
-// containsPort checks if a string contains common port patterns
-func containsPort(text, port string) bool {
-	// Check for common patterns: "port 8000", ":8000", "8000", "listening on 8000", etc.
-	patterns := []string{
-		"port " + port,
-		":" + port,
-		" " + port + " ",
-		" " + port + "\n",
-		"listening on " + port,
-		"running on " + port,
-		"bound to " + port,
+// isWorkerAppFromLogs checks if container logs indicate this is a worker/background process
+func isWorkerAppFromLogs(logs string) bool {
+	lowerLogs := strings.ToLower(logs)
+	
+	// Patterns that indicate a worker/background process
+	workerPatterns := []string{
+		"worker started",
+		"background worker",
+		"worker process",
+		"worker running",
+		"celery",
+		"sidekiq",
+		"bull queue",
+		"task queue",
+		"background task",
 	}
-	lowerText := strings.ToLower(text)
-	for _, pattern := range patterns {
-		if strings.Contains(lowerText, strings.ToLower(pattern)) {
+	
+	// Check for worker indicators
+	for _, pattern := range workerPatterns {
+		if strings.Contains(lowerLogs, pattern) {
 			return true
 		}
 	}
+	
+	// Check for absence of web server indicators
+	webServerPatterns := []string{
+		"listening on",
+		"running on http",
+		"serving on",
+		"bound to",
+		"uvicorn running",
+		"gunicorn",
+		"http server",
+		"web server",
+		"started server",
+		"server listening",
+	}
+	
+	hasWebServer := false
+	for _, pattern := range webServerPatterns {
+		if strings.Contains(lowerLogs, pattern) {
+			hasWebServer = true
+			break
+		}
+	}
+	
+	// If we see "worker" keywords and no web server patterns, it's likely a worker
+	if strings.Contains(lowerLogs, "worker") && !hasWebServer {
+		return true
+	}
+	
 	return false
 }
 

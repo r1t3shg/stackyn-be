@@ -114,6 +114,17 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 		return fmt.Errorf("dockerfile check failed: %w", err)
 	}
 
+	// Check if this is a worker app (not supported)
+	log.Printf("[ENGINE] Step 3.1: Checking if app is a worker/background process...")
+	if gitrepo.IsWorkerApp(repoPath) {
+		log.Printf("[ENGINE] ERROR - Worker app detected, deployment not supported")
+		errorMsg := "Worker apps are not supported yet. Stackyn currently supports only HTTP-based applications that expose a port and serve web requests. Your app does not appear to start a web server. What you can do: • Deploy an API or web app that listens on a port • Wait for background worker support (coming soon)"
+		e.deploymentStore.UpdateError(deploymentID, errorMsg)
+		// Update app status to "Failed"
+		e.appStore.UpdateStatus(deployment.AppID, "Failed")
+		return fmt.Errorf("worker app deployment not supported: %w", fmt.Errorf(errorMsg))
+	}
+
 	// Ensure package-lock.json exists if package.json is present
 	// This fixes the issue where Dockerfiles use `npm ci` but package-lock.json is missing
 	log.Printf("[ENGINE] Step 3.5: Ensuring package-lock.json exists...")
