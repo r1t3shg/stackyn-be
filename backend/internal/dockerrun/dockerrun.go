@@ -280,30 +280,13 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 }
 
 // isWorkerAppFromLogs checks if container logs indicate this is a worker/background process
+// This is a fallback check - primary detection happens in gitrepo.IsWorkerApp
+// Returns true only if logs clearly indicate a worker with no web server indicators
 func isWorkerAppFromLogs(logs string) bool {
 	lowerLogs := strings.ToLower(logs)
 	
-	// Patterns that indicate a worker/background process
-	workerPatterns := []string{
-		"worker started",
-		"background worker",
-		"worker process",
-		"worker running",
-		"celery",
-		"sidekiq",
-		"bull queue",
-		"task queue",
-		"background task",
-	}
-	
-	// Check for worker indicators
-	for _, pattern := range workerPatterns {
-		if strings.Contains(lowerLogs, pattern) {
-			return true
-		}
-	}
-	
-	// Check for absence of web server indicators
+	// First, check for positive web server indicators
+	// If we find these, it's definitely NOT a worker
 	webServerPatterns := []string{
 		"listening on",
 		"running on http",
@@ -315,19 +298,46 @@ func isWorkerAppFromLogs(logs string) bool {
 		"web server",
 		"started server",
 		"server listening",
+		"server started",
+		"listening on port",
+		"listening at",
+		"ready to accept connections",
 	}
 	
 	hasWebServer := false
 	for _, pattern := range webServerPatterns {
 		if strings.Contains(lowerLogs, pattern) {
 			hasWebServer = true
+			log.Printf("[DOCKER] Found web server indicator '%s' in logs - not a worker", pattern)
 			break
 		}
 	}
 	
-	// If we see "worker" keywords and no web server patterns, it's likely a worker
-	if strings.Contains(lowerLogs, "worker") && !hasWebServer {
-		return true
+	// If we found web server indicators, it's NOT a worker
+	if hasWebServer {
+		return false
+	}
+	
+	// Only check for worker patterns if no web server indicators found
+	// Use more specific patterns to avoid false positives
+	workerPatterns := []string{
+		"celery worker",
+		"celery@",
+		"sidekiq",
+		"bull queue",
+		"queue:work",
+		"queue:listen",
+		"worker:start",
+		"background worker started",
+		"worker process started",
+	}
+	
+	// Check for specific worker indicators
+	for _, pattern := range workerPatterns {
+		if strings.Contains(lowerLogs, pattern) {
+			log.Printf("[DOCKER] Detected worker pattern '%s' in container logs", pattern)
+			return true
+		}
 	}
 	
 	return false

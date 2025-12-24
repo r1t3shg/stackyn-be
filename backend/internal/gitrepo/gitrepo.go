@@ -22,6 +22,7 @@ import (
 
 // IsWorkerApp checks if the Dockerfile indicates this is a worker/background process
 // Returns true if worker patterns are found, false otherwise
+// This function is conservative - it only flags apps that are clearly workers
 func IsWorkerApp(repoPath string) bool {
 	dockerfilePath := filepath.Join(repoPath, "Dockerfile")
 	
@@ -31,27 +32,106 @@ func IsWorkerApp(repoPath string) bool {
 	}
 	defer file.Close()
 
+	// Read all lines into memory
+	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := strings.ToLower(scanner.Text())
-		
-		// Check for worker patterns in CMD, ENTRYPOINT, or RUN directives
-		workerPatterns := []string{
-			"worker",
-			"background",
-			"celery",
-			"sidekiq",
-			"bull",
-			"queue",
-			"task",
-			"cron",
+		lines = append(lines, strings.TrimSpace(strings.ToLower(scanner.Text())))
+	}
+	
+	if err := scanner.Err(); err != nil {
+		log.Printf("[GIT] WARNING - Error reading Dockerfile: %v", err)
+		return false
+	}
+
+	// First, check for positive indicators that this IS a web server
+	// If we find these, it's definitely not a worker
+	hasExpose := false
+	hasWebServer := false
+	hasPortEnv := false
+	
+	// Web server indicators
+	webServerIndicators := []string{
+		"node server",
+		"node app",
+		"node index",
+		"npm start",
+		"npm run start",
+		"python app.py",
+		"python main.py",
+		"python server.py",
+		"uvicorn",
+		"gunicorn",
+		"flask run",
+		"python -m flask",
+		"python -m uvicorn",
+		"serve",
+		"http-server",
+	}
+	
+	// Check all lines for web server indicators
+	for _, line := range lines {
+		// Check for EXPOSE directive (indicates web server)
+		if strings.HasPrefix(line, "expose") {
+			hasExpose = true
+			log.Printf("[GIT] Found EXPOSE directive - this is likely a web server, not a worker")
 		}
 		
-		// Check if line contains CMD, ENTRYPOINT, or RUN with worker patterns
-		if strings.Contains(line, "cmd") || strings.Contains(line, "entrypoint") || strings.Contains(line, "run") {
+		// Check for ENV PORT (indicates web server)
+		if strings.HasPrefix(line, "env") && strings.Contains(line, "port") {
+			hasPortEnv = true
+			log.Printf("[GIT] Found ENV PORT - this is likely a web server, not a worker")
+		}
+		
+		// Check for common web server commands in CMD/ENTRYPOINT
+		if strings.HasPrefix(line, "cmd") || strings.HasPrefix(line, "entrypoint") {
+			for _, indicator := range webServerIndicators {
+				if strings.Contains(line, indicator) {
+					hasWebServer = true
+					log.Printf("[GIT] Found web server command '%s' - this is not a worker", indicator)
+					break
+				}
+			}
+		}
+	}
+	
+	// If we found clear web server indicators, it's NOT a worker
+	if hasExpose || hasWebServer || hasPortEnv {
+		return false
+	}
+	
+	// Second pass: check for worker-specific patterns in CMD/ENTRYPOINT only
+	// We only check CMD and ENTRYPOINT (not RUN) because RUN is for build-time setup
+	// Specific worker patterns that indicate background processing
+	workerPatterns := []string{
+		"celery worker",
+		"celery -a",
+		"sidekiq",
+		"bull queue",
+		"queue:work",
+		"queue:listen",
+		"worker:start",
+		"worker start",
+		"background worker",
+		"cron",
+		"/app/worker", // Common pattern for worker binaries
+	}
+	
+	for _, line := range lines {
+		// Only check CMD and ENTRYPOINT lines (not RUN or other directives)
+		if strings.HasPrefix(line, "cmd") || strings.HasPrefix(line, "entrypoint") {
+			// Extract the command part (everything after CMD/ENTRYPOINT)
+			commandPart := ""
+			if strings.HasPrefix(line, "cmd") {
+				commandPart = strings.TrimSpace(line[3:])
+			} else if strings.HasPrefix(line, "entrypoint") {
+				commandPart = strings.TrimSpace(line[10:])
+			}
+			
+			// Check for worker patterns in the actual command
 			for _, pattern := range workerPatterns {
-				if strings.Contains(line, pattern) {
-					log.Printf("[GIT] Detected worker app pattern '%s' in Dockerfile", pattern)
+				if strings.Contains(commandPart, pattern) {
+					log.Printf("[GIT] Detected worker app pattern '%s' in Dockerfile command", pattern)
 					return true
 				}
 			}
