@@ -16,6 +16,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -139,8 +140,10 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	log.Printf("[ENGINE] Using port %d for Traefik routing", detectedPort)
 
 	// Step 2: Build Docker image
-	imageName := fmt.Sprintf("mvp-%s:%d", strings.ToLower(app.Name), deploymentID)
-	log.Printf("[ENGINE] Step 4: Building Docker image: %s", imageName)
+	// Sanitize app name for Docker image name (only lowercase letters, digits, hyphens, underscores, periods)
+	sanitizedName := sanitizeImageName(app.Name)
+	imageName := fmt.Sprintf("mvp-%s:%d", sanitizedName, deploymentID)
+	log.Printf("[ENGINE] Step 4: Building Docker image: %s (from app name: %s)", imageName, app.Name)
 	builtImage, buildLogReader, err := e.builder.Build(ctx, repoPath, imageName)
 	if err != nil {
 		log.Printf("[ENGINE] ERROR - Docker build failed: %v", err)
@@ -172,7 +175,9 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	}
 
 	// Step 3: Run container with Traefik labels and resource limits
-	subdomain := fmt.Sprintf("%s-%d", strings.ToLower(app.Name), deploymentID)
+	// Sanitize app name for subdomain (DNS-compliant: only lowercase letters, digits, hyphens)
+	sanitizedSubdomain := sanitizeSubdomain(app.Name)
+	subdomain := fmt.Sprintf("%s-%d", sanitizedSubdomain, deploymentID)
 	log.Printf("[ENGINE] Step 5: Running container - Subdomain: %s, Base Domain: %s, AppID: %d, DeploymentID: %d, Port: %d", subdomain, e.baseDomain, deployment.AppID, deploymentID, detectedPort)
 	containerID, err := e.runner.Run(ctx, builtImage, subdomain, e.baseDomain, deployment.AppID, deploymentID, detectedPort)
 	if err != nil {
@@ -368,4 +373,99 @@ func (e *Engine) RunLoop(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// sanitizeImageName sanitizes an app name to be a valid Docker image name.
+// Docker image names must:
+//   - Only contain lowercase letters, digits, underscores, periods, and hyphens
+//   - Not start with a period or hyphen
+//   - Not contain spaces or special characters
+//
+// This function:
+//   - Converts to lowercase
+//   - Replaces invalid characters with hyphens
+//   - Removes leading/trailing hyphens and periods
+//   - Ensures the result is not empty
+func sanitizeImageName(name string) string {
+	if name == "" {
+		return "app"
+	}
+
+	// Convert to lowercase
+	sanitized := strings.ToLower(name)
+
+	// Replace invalid characters (anything that's not a-z, 0-9, underscore, period, or hyphen) with hyphens
+	invalidCharRegex := regexp.MustCompile(`[^a-z0-9._-]`)
+	sanitized = invalidCharRegex.ReplaceAllString(sanitized, "-")
+
+	// Remove consecutive hyphens
+	multiHyphenRegex := regexp.MustCompile(`-+`)
+	sanitized = multiHyphenRegex.ReplaceAllString(sanitized, "-")
+
+	// Remove leading and trailing hyphens and periods
+	sanitized = strings.Trim(sanitized, "-.")
+
+	// Ensure it doesn't start with a period or hyphen (Docker requirement)
+	if len(sanitized) > 0 && (sanitized[0] == '.' || sanitized[0] == '-') {
+		sanitized = "app" + sanitized
+	}
+
+	// If empty after sanitization, use default
+	if sanitized == "" {
+		return "app"
+	}
+
+	// Limit length to 128 characters (Docker image name limit)
+	if len(sanitized) > 128 {
+		sanitized = sanitized[:128]
+		// Trim any trailing hyphens/periods after truncation
+		sanitized = strings.Trim(sanitized, "-.")
+	}
+
+	return sanitized
+}
+
+// sanitizeSubdomain sanitizes an app name to be a valid DNS subdomain.
+// DNS subdomains must:
+//   - Only contain lowercase letters, digits, and hyphens
+//   - Not start or end with a hyphen
+//   - Not contain underscores, periods, or other special characters
+//
+// This function:
+//   - Converts to lowercase
+//   - Replaces invalid characters with hyphens
+//   - Removes leading/trailing hyphens
+//   - Ensures the result is not empty
+func sanitizeSubdomain(name string) string {
+	if name == "" {
+		return "app"
+	}
+
+	// Convert to lowercase
+	sanitized := strings.ToLower(name)
+
+	// Replace invalid characters (anything that's not a-z, 0-9, or hyphen) with hyphens
+	invalidCharRegex := regexp.MustCompile(`[^a-z0-9-]`)
+	sanitized = invalidCharRegex.ReplaceAllString(sanitized, "-")
+
+	// Remove consecutive hyphens
+	multiHyphenRegex := regexp.MustCompile(`-+`)
+	sanitized = multiHyphenRegex.ReplaceAllString(sanitized, "-")
+
+	// Remove leading and trailing hyphens
+	sanitized = strings.Trim(sanitized, "-")
+
+	// If empty after sanitization, use default
+	if sanitized == "" {
+		return "app"
+	}
+
+	// Limit length to 63 characters (DNS label limit)
+	if len(sanitized) > 63 {
+		sanitized = sanitized[:63]
+		// Trim any trailing hyphens after truncation
+		sanitized = strings.Trim(sanitized, "-")
+	}
+
+	return sanitized
 }
