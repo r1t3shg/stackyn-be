@@ -346,6 +346,27 @@ func isWorkerAppFromLogs(logs string) bool {
 func (r *Runner) Stop(ctx context.Context, containerID string) error {
 	log.Printf("[DOCKER] Stopping container: %s", containerID)
 	
+	// First, try to inspect the container to check its status
+	inspectCtx, cancelInspect := context.WithTimeout(ctx, 10*time.Second)
+	containerInfo, inspectErr := r.client.ContainerInspect(inspectCtx, containerID)
+	cancelInspect()
+	
+	if inspectErr != nil {
+		// Container might not exist
+		if strings.Contains(inspectErr.Error(), "No such container") {
+			log.Printf("[DOCKER] Container %s does not exist, skipping stop", containerID)
+			return nil
+		}
+		log.Printf("[DOCKER] WARNING - Failed to inspect container %s: %v (will try to stop anyway)", containerID, inspectErr)
+	} else {
+		// Check if container is already stopped
+		if !containerInfo.State.Running {
+			log.Printf("[DOCKER] Container %s is already stopped (Status: %s)", containerID, containerInfo.State.Status)
+			return nil
+		}
+		log.Printf("[DOCKER] Container %s is running, stopping it...", containerID)
+	}
+	
 	// Use a timeout of 30 seconds for stopping the container
 	stopCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -357,9 +378,11 @@ func (r *Runner) Stop(ctx context.Context, containerID string) error {
 	})
 	if err != nil {
 		// Check if container doesn't exist or is already stopped
-		if strings.Contains(err.Error(), "No such container") || 
-		   strings.Contains(err.Error(), "is not running") ||
-		   strings.Contains(err.Error(), "already stopped") {
+		errStr := err.Error()
+		if strings.Contains(errStr, "No such container") || 
+		   strings.Contains(errStr, "is not running") ||
+		   strings.Contains(errStr, "already stopped") ||
+		   strings.Contains(errStr, "not found") {
 			log.Printf("[DOCKER] Container %s is already stopped or doesn't exist: %v", containerID, err)
 			return nil // Not an error if already stopped
 		}
@@ -374,16 +397,34 @@ func (r *Runner) Stop(ctx context.Context, containerID string) error {
 func (r *Runner) Remove(ctx context.Context, containerID string) error {
 	log.Printf("[DOCKER] Removing container: %s", containerID)
 	
+	// First, try to inspect the container to check if it exists
+	inspectCtx, cancelInspect := context.WithTimeout(ctx, 10*time.Second)
+	_, inspectErr := r.client.ContainerInspect(inspectCtx, containerID)
+	cancelInspect()
+	
+	if inspectErr != nil {
+		// Container doesn't exist
+		if strings.Contains(inspectErr.Error(), "No such container") || 
+		   strings.Contains(inspectErr.Error(), "not found") {
+			log.Printf("[DOCKER] Container %s does not exist, skipping remove", containerID)
+			return nil
+		}
+		log.Printf("[DOCKER] WARNING - Failed to inspect container %s: %v (will try to remove anyway)", containerID, inspectErr)
+	}
+	
 	// Use a timeout of 30 seconds for removing the container
 	removeCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	
 	err := r.client.ContainerRemove(removeCtx, containerID, container.RemoveOptions{
-		Force: true, // Force removal even if running
+		Force:         true, // Force removal even if running
+		RemoveVolumes: true, // Also remove volumes
 	})
 	if err != nil {
 		// Check if container doesn't exist
-		if strings.Contains(err.Error(), "No such container") {
+		errStr := err.Error()
+		if strings.Contains(errStr, "No such container") || 
+		   strings.Contains(errStr, "not found") {
 			log.Printf("[DOCKER] Container %s doesn't exist (may already be removed): %v", containerID, err)
 			return nil // Not an error if already removed
 		}

@@ -541,15 +541,26 @@ func deleteApp(appStore *apps.Store, deploymentStore *deployments.Store, runner 
 				deployment := appDeployments[i]
 				if deployment.ContainerID.Valid && deployment.ContainerID.String != "" {
 					containerID := deployment.ContainerID.String
-					log.Printf("[API] Stopping container: %s", containerID)
+					log.Printf("[API] Attempting to stop container: %s (deployment ID: %d)", containerID, deployment.ID)
 					
-					// Stop the container (ignore error if already stopped)
+					// Stop the container
 					if stopErr := runner.Stop(ctx, containerID); stopErr != nil {
-						log.Printf("[API] WARNING - Failed to stop container %s: %v (may already be stopped, will try to remove anyway)", containerID, stopErr)
+						log.Printf("[API] ERROR - Failed to stop container %s: %v", containerID, stopErr)
+						// Try to stop by container name as fallback
+						containerName := fmt.Sprintf("app-%d-%d", id, deployment.ID)
+						log.Printf("[API] Attempting fallback: stopping container by name: %s", containerName)
+						if nameStopErr := runner.Stop(ctx, containerName); nameStopErr != nil {
+							log.Printf("[API] ERROR - Failed to stop container by name %s: %v", containerName, nameStopErr)
+						} else {
+							log.Printf("[API] Container stopped successfully by name: %s", containerName)
+							stoppedContainers = append(stoppedContainers, containerName)
+						}
 					} else {
 						log.Printf("[API] Container stopped successfully: %s", containerID)
 						stoppedContainers = append(stoppedContainers, containerID)
 					}
+				} else {
+					log.Printf("[API] WARNING - Deployment %d has no container ID stored", deployment.ID)
 				}
 			}
 			
@@ -565,12 +576,29 @@ func deleteApp(appStore *apps.Store, deploymentStore *deployments.Store, runner 
 				deployment := appDeployments[i]
 				if deployment.ContainerID.Valid && deployment.ContainerID.String != "" {
 					containerID := deployment.ContainerID.String
-					log.Printf("[API] Removing container: %s", containerID)
+					log.Printf("[API] Attempting to remove container: %s (deployment ID: %d)", containerID, deployment.ID)
 					
 					if removeErr := runner.Remove(ctx, containerID); removeErr != nil {
-						log.Printf("[API] WARNING - Failed to remove container %s: %v (continuing anyway)", containerID, removeErr)
+						log.Printf("[API] ERROR - Failed to remove container %s: %v", containerID, removeErr)
+						// Try to remove by container name as fallback
+						containerName := fmt.Sprintf("app-%d-%d", id, deployment.ID)
+						log.Printf("[API] Attempting fallback: removing container by name: %s", containerName)
+						if nameRemoveErr := runner.Remove(ctx, containerName); nameRemoveErr != nil {
+							log.Printf("[API] ERROR - Failed to remove container by name %s: %v", containerName, nameRemoveErr)
+						} else {
+							log.Printf("[API] Container removed successfully by name: %s", containerName)
+						}
 					} else {
 						log.Printf("[API] Container removed successfully: %s", containerID)
+					}
+				} else {
+					log.Printf("[API] WARNING - Deployment %d has no container ID stored, trying by name", deployment.ID)
+					containerName := fmt.Sprintf("app-%d-%d", id, deployment.ID)
+					log.Printf("[API] Attempting to remove container by name: %s", containerName)
+					if nameRemoveErr := runner.Remove(ctx, containerName); nameRemoveErr != nil {
+						log.Printf("[API] ERROR - Failed to remove container by name %s: %v", containerName, nameRemoveErr)
+					} else {
+						log.Printf("[API] Container removed successfully by name: %s", containerName)
 					}
 				}
 			}
@@ -581,21 +609,27 @@ func deleteApp(appStore *apps.Store, deploymentStore *deployments.Store, runner 
 			
 			// Step 4: Delete all Docker images (after containers are stopped and removed)
 			log.Printf("[API] Step 2: Deleting all Docker images...")
+			deletedImages := 0
+			failedImages := 0
 			for i := range appDeployments {
 				deployment := appDeployments[i]
 				if deployment.ImageName.Valid && deployment.ImageName.String != "" {
 					imageName := deployment.ImageName.String
-					log.Printf("[API] Deleting Docker image: %s", imageName)
+					log.Printf("[API] Attempting to delete Docker image: %s (deployment ID: %d)", imageName, deployment.ID)
 					
 					if imageErr := runner.RemoveImage(ctx, imageName); imageErr != nil {
-						log.Printf("[API] WARNING - Failed to delete image %s: %v", imageName, imageErr)
+						log.Printf("[API] ERROR - Failed to delete image %s: %v", imageName, imageErr)
+						failedImages++
 					} else {
 						log.Printf("[API] Image deleted successfully: %s", imageName)
+						deletedImages++
 					}
+				} else {
+					log.Printf("[API] WARNING - Deployment %d has no image name stored", deployment.ID)
 				}
 			}
 			
-			log.Printf("[API] Docker cleanup completed for app %d", id)
+			log.Printf("[API] Docker cleanup summary for app %d: %d images deleted, %d failed", id, deletedImages, failedImages)
 		}
 
 		// Step 5: Finally, delete the app from PostgreSQL database (this will cascade delete deployments)
