@@ -176,7 +176,8 @@ func fixDockerfileNpmCi(repoPath, dockerfilePath string) error {
 }
 
 // DetectPortFromDockerfile attempts to detect the port from the Dockerfile's EXPOSE directive.
-// Returns the first port found, or 8080 as default if no EXPOSE directive is found.
+// Also checks for common port patterns in CMD/RUN directives (e.g., uvicorn --port, flask run --port).
+// Returns the first port found, or attempts to detect from common patterns, or 8080 as default.
 func DetectPortFromDockerfile(repoPath string) int {
 	dockerfilePath := filepath.Join(repoPath, "Dockerfile")
 	
@@ -187,18 +188,61 @@ func DetectPortFromDockerfile(repoPath string) int {
 	}
 	defer file.Close()
 
-	// Regex to match EXPOSE directive: EXPOSE 3000, EXPOSE 8080, EXPOSE 5000:8080, etc.
+	// Regex patterns for port detection
 	exposeRegex := regexp.MustCompile(`(?i)^\s*EXPOSE\s+(\d+)`)
+	// Common Python patterns: uvicorn --port 8000, gunicorn -b :8000, flask run --port 5000
+	uvicornRegex := regexp.MustCompile(`(?i)uvicorn.*--port\s+(\d+)`)
+	gunicornRegex := regexp.MustCompile(`(?i)gunicorn.*-b\s+[:\d.]*:(\d+)`)
+	flaskRegex := regexp.MustCompile(`(?i)flask.*--port\s+(\d+)`)
+	// Generic port patterns: -p 8000, :8000, port=8000
+	genericPortRegex := regexp.MustCompile(`(?i)(?:-p|--port|port=)[\s:=]+(\d+)`)
 	
 	scanner := bufio.NewScanner(file)
+	var detectedPort int
+	foundExpose := false
+	
 	for scanner.Scan() {
 		line := scanner.Text()
+		
+		// First, check for EXPOSE directive (highest priority)
 		matches := exposeRegex.FindStringSubmatch(line)
 		if len(matches) > 1 {
 			port, err := strconv.Atoi(matches[1])
 			if err == nil && port > 0 && port < 65536 {
 				log.Printf("[GIT] Detected port %d from Dockerfile EXPOSE directive", port)
 				return port
+			}
+		}
+		
+		// If no EXPOSE found yet, check for common Python patterns
+		if !foundExpose {
+			// Check for uvicorn (FastAPI)
+			if matches := uvicornRegex.FindStringSubmatch(line); len(matches) > 1 {
+				if port, err := strconv.Atoi(matches[1]); err == nil && port > 0 && port < 65536 {
+					detectedPort = port
+					log.Printf("[GIT] Detected port %d from uvicorn command", port)
+				}
+			}
+			// Check for gunicorn
+			if matches := gunicornRegex.FindStringSubmatch(line); len(matches) > 1 {
+				if port, err := strconv.Atoi(matches[1]); err == nil && port > 0 && port < 65536 {
+					detectedPort = port
+					log.Printf("[GIT] Detected port %d from gunicorn command", port)
+				}
+			}
+			// Check for flask
+			if matches := flaskRegex.FindStringSubmatch(line); len(matches) > 1 {
+				if port, err := strconv.Atoi(matches[1]); err == nil && port > 0 && port < 65536 {
+					detectedPort = port
+					log.Printf("[GIT] Detected port %d from flask command", port)
+				}
+			}
+			// Check for generic port patterns
+			if matches := genericPortRegex.FindStringSubmatch(line); len(matches) > 1 {
+				if port, err := strconv.Atoi(matches[1]); err == nil && port > 0 && port < 65536 {
+					detectedPort = port
+					log.Printf("[GIT] Detected port %d from generic port pattern", port)
+				}
 			}
 		}
 	}
@@ -208,6 +252,12 @@ func DetectPortFromDockerfile(repoPath string) int {
 		return 8080
 	}
 
-	log.Printf("[GIT] No EXPOSE directive found in Dockerfile, using default port 8080")
+	// If we detected a port from patterns, use it
+	if detectedPort > 0 {
+		log.Printf("[GIT] Using detected port %d from Dockerfile patterns", detectedPort)
+		return detectedPort
+	}
+
+	log.Printf("[GIT] No EXPOSE directive or port patterns found in Dockerfile, using default port 8080")
 	return 8080
 }
