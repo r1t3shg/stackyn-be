@@ -1,8 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignInClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (user) {
+      window.location.href = 'https://console.staging.stackyn.com/';
+    } else {
+      navigate('/login');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -39,13 +51,14 @@ export default function LandingPage() {
               </Link>
             </nav>
 
-            {/* Desktop Console CTA */}
+            {/* Desktop Sign In CTA */}
             <div className="hidden md:flex items-center">
               <a
-                href="https://console.staging.stackyn.com/"
+                href={user ? "https://console.staging.stackyn.com/" : "/login"}
+                onClick={handleSignInClick}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
               >
-                Console
+                Sign in
               </a>
             </div>
 
@@ -101,10 +114,11 @@ export default function LandingPage() {
                   Pricing
                 </Link>
                 <a
-                  href="https://console.staging.stackyn.com/"
+                  href={user ? "https://console.staging.stackyn.com/" : "/login"}
+                  onClick={handleSignInClick}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-center"
                 >
-                  Console
+                  Sign in
                 </a>
               </nav>
             </div>
@@ -125,10 +139,11 @@ export default function LandingPage() {
             </p>
             <div className="flex justify-center gap-4">
               <a
-                href="https://console.staging.stackyn.com/"
+                href={user ? "https://console.staging.stackyn.com/" : "/login"}
+                onClick={handleSignInClick}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors text-lg"
               >
-                Get Started
+                Sign in
               </a>
               <Link
                 to="/pricing"
@@ -252,10 +267,11 @@ export default function LandingPage() {
             Join developers who are already using Stackyn to simplify their deployment process.
           </p>
           <a
-            href="https://console.staging.stackyn.com/"
+            href={user ? "https://console.staging.stackyn.com/" : "/login"}
+            onClick={handleSignInClick}
             className="inline-block bg-white hover:bg-gray-100 text-blue-600 font-semibold py-3 px-8 rounded-lg transition-colors text-lg"
           >
-            Go to Console
+            Sign in
           </a>
         </div>
       </section>
@@ -279,8 +295,12 @@ export default function LandingPage() {
                   </Link>
                 </li>
                 <li>
-                  <a href="https://console.staging.stackyn.com/" className="hover:text-white transition-colors">
-                    Console
+                  <a 
+                    href={user ? "https://console.staging.stackyn.com/" : "/login"} 
+                    onClick={handleSignInClick}
+                    className="hover:text-white transition-colors"
+                  >
+                    Sign in
                   </a>
                 </li>
               </ul>
@@ -303,10 +323,11 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-semibold mb-4">Get Started</h4>
               <a
-                href="https://console.staging.stackyn.com/"
+                href={user ? "https://console.staging.stackyn.com/" : "/login"}
+                onClick={handleSignInClick}
                 className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
               >
-                Launch Console
+                Sign in
               </a>
             </div>
           </div>

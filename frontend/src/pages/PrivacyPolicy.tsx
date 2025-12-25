@@ -1,6 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function PrivacyPolicy() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignInClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (user) {
+      window.location.href = 'https://console.staging.stackyn.com/';
+    } else {
+      navigate('/login');
+    }
+  };
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -31,10 +43,11 @@ export default function PrivacyPolicy() {
               </Link>
             </nav>
             <a
-              href="https://console.staging.stackyn.com/"
+              href={user ? "https://console.staging.stackyn.com/" : "/login"}
+              onClick={handleSignInClick}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
-              Console
+              Sign in
             </a>
           </div>
         </div>

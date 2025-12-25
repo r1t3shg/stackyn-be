@@ -1,6 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Pricing() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignInClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (user) {
+      window.location.href = 'https://console.staging.stackyn.com/';
+    } else {
+      navigate('/login');
+    }
+  };
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -31,10 +43,11 @@ export default function Pricing() {
               </Link>
             </nav>
             <a
-              href="https://console.staging.stackyn.com/"
+              href={user ? "https://console.staging.stackyn.com/" : "/login"}
+              onClick={handleSignInClick}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
-              Console
+              Sign in
             </a>
           </div>
         </div>
@@ -87,10 +100,11 @@ export default function Pricing() {
               </li>
             </ul>
             <a
-              href="https://console.staging.stackyn.com/"
+              href={user ? "https://console.staging.stackyn.com/" : "/login"}
+              onClick={handleSignInClick}
               className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors"
             >
-              Get Started
+              Sign in
             </a>
           </div>
 
@@ -146,10 +160,11 @@ export default function Pricing() {
               </li>
             </ul>
             <a
-              href="https://console.staging.stackyn.com/"
+              href={user ? "https://console.staging.stackyn.com/" : "/login"}
+              onClick={handleSignInClick}
               className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
             >
-              Get Started
+              Sign in
             </a>
           </div>
 
@@ -201,10 +216,11 @@ export default function Pricing() {
               </li>
             </ul>
             <a
-              href="https://console.staging.stackyn.com/"
+              href={user ? "https://console.staging.stackyn.com/" : "/login"}
+              onClick={handleSignInClick}
               className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium py-3 px-6 rounded-lg transition-colors"
             >
-              Contact Sales
+              Sign in
             </a>
           </div>
         </div>
