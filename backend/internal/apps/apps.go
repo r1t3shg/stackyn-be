@@ -166,3 +166,13 @@ func (s *Store) ListAppsByUserID(ctx context.Context, userID string) ([]App, err
 
 	return apps, nil
 }
+
+// CountByUserID counts the number of apps owned by the given user_id.
+func (s *Store) CountByUserID(ctx context.Context, userID string) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM apps WHERE user_id = $1", userID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}

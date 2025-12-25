@@ -255,8 +255,24 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 			return
 		}
 
+		// Check app limit (3 apps per user)
+		appCount, err := appStore.CountByUserID(r.Context(), userID)
+		if err != nil {
+			log.Printf("[API] ERROR - Failed to count user apps: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to check app limit")
+			return
+		}
+		if appCount >= 3 {
+			log.Printf("[API] ERROR - User %s has reached app limit (3 apps)", userID)
+			respondJSON(w, http.StatusForbidden, map[string]interface{}{
+				"error": "App limit reached. You can only have up to 3 apps. Please delete an existing app to create a new one.",
+				"app":   nil,
+			})
+			return
+		}
+
 		// Create app first
-		log.Printf("[API] Creating app in database for user: %s", userID)
+		log.Printf("[API] Creating app in database for user: %s (current count: %d/3)", userID, appCount)
 		app, err := appStore.Create(userID, req.Name, req.RepoURL, req.Branch)
 		if err != nil {
 			log.Printf("[API] ERROR - Failed to create app: %v", err)
