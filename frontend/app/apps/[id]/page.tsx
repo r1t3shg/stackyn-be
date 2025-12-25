@@ -62,13 +62,14 @@ export default function AppDetailsPage() {
     setEnvVarsError(null);
     try {
       const data = await appsApi.getEnvVars(appId);
-      setEnvVars(data);
+      // Ensure data is always an array, never null or undefined
+      setEnvVars(Array.isArray(data) ? data : []);
       console.log('Environment variables loaded:', data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load environment variables';
       console.error('Error loading environment variables:', err);
       setEnvVarsError(errorMessage);
-      // Still show the section even if there's an error
+      // Still show the section even if there's an error - set to empty array
       setEnvVars([]);
     } finally {
       setLoadingEnvVars(false);
@@ -317,7 +318,7 @@ export default function AppDetailsPage() {
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
               <p>Loading environment variables...</p>
             </div>
-          ) : envVars.length === 0 ? (
+          ) : !envVars || envVars.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No environment variables configured</p>
               <p className="text-sm mt-2">Add environment variables that will be injected into your running container</p>

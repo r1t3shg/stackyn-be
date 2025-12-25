@@ -101,7 +101,9 @@ export const appsApi = {
   // Get environment variables for an app
   getEnvVars: async (id: string | number): Promise<EnvVar[]> => {
     const response = await safeFetch(`${API_ENDPOINTS.apps}/${id}/env`);
-    return handleResponse<EnvVar[]>(response);
+    const data = await handleResponse<EnvVar[]>(response);
+    // Ensure we always return an array, never null or undefined
+    return Array.isArray(data) ? data : [];
   },
 
   // Create or update an environment variable
