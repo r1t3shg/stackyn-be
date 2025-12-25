@@ -35,6 +35,9 @@ RUN apk add --no-cache git
 # Set working directory inside the container
 WORKDIR /app
 
+# Set GOTOOLCHAIN to use local version (prevents auto-upgrade to non-existent versions)
+ENV GOTOOLCHAIN=local
+
 # Copy module files first and download dependencies (better layer caching)
 COPY go.mod go.sum ./
 RUN go mod download
@@ -42,7 +45,7 @@ RUN go mod download
 # Copy the rest of the source code
 COPY . .
 
-# Update go.sum for any replace directives
+# Update go.sum for any replace directives (but keep Go version as specified in go.mod)
 RUN go mod tidy
 
 # Build the API and worker binaries for Linux
