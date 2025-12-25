@@ -236,7 +236,7 @@ export default function AppDetailsPage() {
             <div className="border-t border-gray-200 pt-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Latest Deployment</h3>
               <div className="bg-gray-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <p className="text-sm text-gray-500">Status</p>
                     <StatusBadge status={app.deployment.state} />
@@ -250,6 +250,32 @@ export default function AppDetailsPage() {
                     </div>
                   )}
                 </div>
+                
+                {app.deployment.resource_limits && (
+                  <div className="border-t border-gray-200 pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Resource Limits</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">Memory</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {app.deployment.resource_limits.memory_mb} MB
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">CPU</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {app.deployment.resource_limits.cpu.toFixed(2)} vCPU
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-500 mb-1">Disk</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {app.deployment.resource_limits.disk_gb} GB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

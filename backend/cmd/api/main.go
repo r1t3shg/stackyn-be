@@ -152,7 +152,7 @@ func main() {
 		// Apps endpoints
 		r.Route("/apps", func(r chi.Router) {
 			r.Post("/", createApp(appStore, deploymentStore, cloner))
-			r.Get("/{id}", getApp(appStore, deploymentStore))
+			r.Get("/{id}", getApp(appStore, deploymentStore, runner))
 			r.Delete("/{id}", deleteApp(appStore, deploymentStore, runner))
 			r.Post("/{id}/redeploy", redeployApp(appStore, deploymentStore, cloner))
 			r.Get("/{id}/deployments", listDeployments(deploymentStore))
@@ -369,7 +369,7 @@ func createApp(appStore *apps.Store, deploymentStore *deployments.Store, cloner 
 	}
 }
 
-func getApp(appStore *apps.Store, deploymentStore *deployments.Store) http.HandlerFunc {
+func getApp(appStore *apps.Store, deploymentStore *deployments.Store, runner *dockerrun.Runner) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.Atoi(chi.URLParam(r, "id"))
 		if err != nil {
@@ -414,11 +414,32 @@ func getApp(appStore *apps.Store, deploymentStore *deployments.Store) http.Handl
 			// Format deployment ID as "dep_{id}"
 			activeDeploymentID := fmt.Sprintf("dep_%d", activeDeployment.ID)
 			
-			response["deployment"] = map[string]interface{}{
+			deploymentInfo := map[string]interface{}{
 				"active_deployment_id": activeDeploymentID,
 				"last_deployed_at":     activeDeployment.UpdatedAt,
 				"state":                state,
 			}
+			
+			// Try to get resource limits from Docker container if it exists
+			if activeDeployment.ContainerID.Valid && activeDeployment.ContainerID.String != "" {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				
+				memoryLimitMB, cpuLimit, diskLimitGB, limitsErr := runner.GetResourceLimits(ctx, activeDeployment.ContainerID.String)
+				if limitsErr == nil {
+					deploymentInfo["resource_limits"] = map[string]interface{}{
+						"memory_mb": memoryLimitMB,
+						"cpu":       cpuLimit,
+						"disk_gb":   diskLimitGB,
+					}
+					log.Printf("[API] Resource limits retrieved - Memory: %d MB, CPU: %.2f, Disk: %d GB", 
+						memoryLimitMB, cpuLimit, diskLimitGB)
+				} else {
+					log.Printf("[API] WARNING - Failed to get resource limits: %v", limitsErr)
+				}
+			}
+			
+			response["deployment"] = deploymentInfo
 		} else {
 			// No deployment found
 			response["deployment"] = map[string]interface{}{

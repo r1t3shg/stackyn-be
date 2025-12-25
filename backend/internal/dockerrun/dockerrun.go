@@ -505,3 +505,56 @@ func (r *Runner) GetLogs(ctx context.Context, containerID string, tail string) (
 	log.Printf("[DOCKER] Logs fetched successfully for container: %s", containerID)
 	return logsReader, nil
 }
+
+// GetResourceLimits retrieves the resource limits (memory, CPU, disk) for a Docker container.
+// Returns the limits configured when the container was created.
+//
+// Parameters:
+//   - ctx: Context for cancellation/timeout
+//   - containerID: The Docker container ID to inspect
+//
+// Returns:
+//   - memoryLimitMB: Memory limit in MB (0 if not set)
+//   - cpuLimit: CPU limit as a fraction (e.g., 0.25 for 25% of one CPU core)
+//   - diskLimitGB: Disk limit in GB (currently not enforced, returns 1 GB as default)
+//   - error: Error if container inspection fails
+func (r *Runner) GetResourceLimits(ctx context.Context, containerID string) (memoryLimitMB int64, cpuLimit float64, diskLimitGB int64, err error) {
+	log.Printf("[DOCKER] Fetching resource limits for container: %s", containerID)
+	
+	// Use a timeout of 10 seconds for inspecting the container
+	inspectCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	
+	containerInfo, err := r.client.ContainerInspect(inspectCtx, containerID)
+	if err != nil {
+		log.Printf("[DOCKER] ERROR - Failed to inspect container %s: %v", containerID, err)
+		return 0, 0, 0, fmt.Errorf("failed to inspect container: %w", err)
+	}
+	
+	// Extract memory limit (in bytes, convert to MB)
+	if containerInfo.HostConfig != nil && containerInfo.HostConfig.Memory > 0 {
+		memoryLimitMB = containerInfo.HostConfig.Memory / (1024 * 1024)
+	} else {
+		// Default memory limit if not set
+		memoryLimitMB = 256
+	}
+	
+	// Extract CPU limit (from CPUQuota and CPUPeriod)
+	if containerInfo.HostConfig != nil && containerInfo.HostConfig.CPUQuota > 0 && containerInfo.HostConfig.CPUPeriod > 0 {
+		// CPU limit = CPUQuota / CPUPeriod
+		// Example: 25000 / 100000 = 0.25 (25% of one CPU core)
+		cpuLimit = float64(containerInfo.HostConfig.CPUQuota) / float64(containerInfo.HostConfig.CPUPeriod)
+	} else {
+		// Default CPU limit if not set
+		cpuLimit = 0.25
+	}
+	
+	// Disk limit is not currently enforced in Docker (as per comments in Run method)
+	// Return default of 1 GB as mentioned in the TODO comments
+	diskLimitGB = 1
+	
+	log.Printf("[DOCKER] Resource limits for container %s - Memory: %d MB, CPU: %.2f, Disk: %d GB", 
+		containerID, memoryLimitMB, cpuLimit, diskLimitGB)
+	
+	return memoryLimitMB, cpuLimit, diskLimitGB, nil
+}

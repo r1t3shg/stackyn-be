@@ -14,6 +14,11 @@ export interface App {
     active_deployment_id: string | null;
     last_deployed_at: string | null;
     state: string;
+    resource_limits?: {
+      memory_mb: number;
+      cpu: number;
+      disk_gb: number;
+    };
   };
 }
 
