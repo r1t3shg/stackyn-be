@@ -14,7 +14,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (!isLoading && user) {
-      navigate('/', { replace: true });
+      navigate('/apps', { replace: true });
     }
   }, [user, isLoading, navigate]);
 
@@ -29,7 +29,7 @@ export default function Login() {
       } else {
         await login(email, password);
       }
-      navigate('/');
+      navigate('/apps');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

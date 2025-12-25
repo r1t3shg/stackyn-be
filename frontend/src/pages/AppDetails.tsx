@@ -102,7 +102,7 @@ export default function AppDetailsPage() {
 
     try {
       await appsApi.delete(appId);
-      navigate('/');
+      navigate('/apps');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete app');
       console.error('Error deleting app:', err);
