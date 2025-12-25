@@ -82,13 +82,13 @@ func (r *Runner) Run(ctx context.Context, imageName, subdomain, baseDomain strin
 	log.Printf("[DOCKER] Running container - Image: %s, Subdomain: %s, FQDN: %s, Name: %s", imageName, subdomain, fqdn, containerName)
 
 	// Create Traefik labels with HTTPS/TLS support
+	// Note: In Traefik v3, tls.certresolver automatically enables TLS
 	labels := map[string]string{
 		"traefik.enable": "true",
 		"traefik.docker.network": "stackyn-network",
-		// HTTPS Router
+		// HTTPS Router with Let's Encrypt certificate
 		"traefik.http.routers." + routerName + ".rule":                       fmt.Sprintf("Host(`%s`)", fqdn),
 		"traefik.http.routers." + routerName + ".entrypoints":                "websecure",
-		"traefik.http.routers." + routerName + ".tls":                        "true",
 		"traefik.http.routers." + routerName + ".tls.certresolver":           "letsencrypt",
 		"traefik.http.routers." + routerName + ".service":                    serviceName,
 		// HTTP Router (redirects to HTTPS using inline redirect middleware)

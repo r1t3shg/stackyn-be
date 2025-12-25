@@ -51,6 +51,10 @@ certificatesResolvers:
       storage: /etc/traefik/acme/acme.json
       httpChallenge:
         entryPoint: web
+      # Optional: Use Let's Encrypt staging for testing (remove in production)
+      # caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      # Enable certificate persistence and automatic renewal
+      keyType: "EC256"
 
 log:
   level: INFO
