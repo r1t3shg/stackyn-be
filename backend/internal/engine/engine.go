@@ -13,6 +13,7 @@ package engine
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"fmt"
 	"log"
@@ -205,14 +206,17 @@ func (e *Engine) ProcessDeployment(ctx context.Context, deploymentID int) error 
 	// Step 6: Verify new container is healthy before stopping old containers
 	// This ensures zero-downtime deployment - old containers keep running if new one fails
 	appURL := fmt.Sprintf("https://%s.%s", subdomain, e.baseDomain)
+	appURLHTTP := fmt.Sprintf("http://%s.%s", subdomain, e.baseDomain)
 	log.Printf("[ENGINE] Step 6: Verifying new container health at %s...", appURL)
 	
-	// Wait a bit for Traefik to register the new container and for the app to start
-	log.Printf("[ENGINE] Waiting 5 seconds for Traefik routing and app initialization...")
-	time.Sleep(5 * time.Second)
+	// Wait a bit for Traefik to register the new container, for the app to start,
+	// and for Let's Encrypt certificate to be generated (can take 10-30+ seconds)
+	log.Printf("[ENGINE] Waiting 10 seconds for Traefik routing, app initialization, and SSL certificate generation...")
+	time.Sleep(10 * time.Second)
 	
-	// Perform health check - try to reach the HTTP endpoint
-	healthCheckPassed := verifyContainerHealth(ctx, appURL)
+	// Perform health check - try HTTPS first, fallback to HTTP if HTTPS certificate isn't ready yet
+	// Let's Encrypt certificates can take time to generate, so we check HTTP as a fallback
+	healthCheckPassed := verifyContainerHealth(ctx, appURL, appURLHTTP)
 	
 	if !healthCheckPassed {
 		log.Printf("[ENGINE] ERROR - New container health check failed at %s", appURL)
@@ -578,59 +582,102 @@ func sanitizeSubdomain(name string) string {
 
 // verifyContainerHealth checks if the container is responding to HTTP requests.
 // It attempts to reach the container's URL multiple times with retries.
+// It tries HTTPS first, and falls back to HTTP if HTTPS certificate isn't ready yet.
 // Returns true if the container responds with any HTTP status code (even errors),
 // false if it cannot be reached at all.
-func verifyContainerHealth(ctx context.Context, url string) bool {
-	log.Printf("[ENGINE] Health check: Attempting to reach %s", url)
+func verifyContainerHealth(ctx context.Context, httpsURL string, httpURL string) bool {
+	log.Printf("[ENGINE] Health check: Attempting to reach %s (will fallback to %s if HTTPS cert not ready)", httpsURL, httpURL)
 	
-	// Create HTTP client with timeout
+	// Create HTTP client with timeout and skip SSL verification for health checks
+	// (we're just checking if the service is up, not validating SSL certificates)
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // Skip SSL verification for health checks
+		},
+	}
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout:   15 * time.Second,
+		Transport: transport,
 	}
 	
-	// Try up to 3 times with increasing delays
-	maxRetries := 3
+	// Try up to 5 times with increasing delays (more retries for Let's Encrypt certificate generation)
+	maxRetries := 5
+	
+	// First, try HTTPS up to maxRetries times
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		log.Printf("[ENGINE] Health check attempt %d/%d for %s", attempt, maxRetries, url)
+		log.Printf("[ENGINE] Health check attempt %d/%d (HTTPS) for %s", attempt, maxRetries, httpsURL)
 		
-		// Create request with context
-		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", httpsURL, nil)
 		if err != nil {
-			log.Printf("[ENGINE] WARNING - Failed to create health check request: %v", err)
+			log.Printf("[ENGINE] WARNING - Failed to create HTTPS health check request: %v", err)
 			if attempt < maxRetries {
-				time.Sleep(2 * time.Second)
-				continue
+				time.Sleep(time.Duration(attempt) * 3 * time.Second)
 			}
-			return false
+			continue
 		}
 		
-		// Set a reasonable timeout for this request
 		req.Header.Set("User-Agent", "Stackyn-HealthCheck/1.0")
+		req.Header.Set("Accept", "*/*")
 		
-		// Make the request
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Printf("[ENGINE] Health check attempt %d failed: %v", attempt, err)
+			log.Printf("[ENGINE] HTTPS health check attempt %d failed: %v", attempt, err)
+			if resp != nil {
+				resp.Body.Close()
+			}
 			if attempt < maxRetries {
-				// Wait before retry (exponential backoff: 2s, 4s)
-				waitTime := time.Duration(attempt) * 2 * time.Second
+				// Exponential backoff: 3s, 6s, 12s, 24s
+				waitTime := time.Duration(attempt) * 3 * time.Second
 				log.Printf("[ENGINE] Waiting %v before retry...", waitTime)
 				time.Sleep(waitTime)
-				continue
 			}
-			log.Printf("[ENGINE] Health check failed after %d attempts: %v", maxRetries, err)
-			return false
+			continue
 		}
 		
-		// Close response body
 		resp.Body.Close()
-		
-		// Any HTTP response (even 4xx/5xx) means the container is running and responding
-		// We consider it healthy if we get any response
-		log.Printf("[ENGINE] Health check passed - Container responded with status %d", resp.StatusCode)
+		log.Printf("[ENGINE] Health check passed (HTTPS) - Container responded with status %d", resp.StatusCode)
 		return true
 	}
 	
-	log.Printf("[ENGINE] Health check failed - Container did not respond after %d attempts", maxRetries)
+	// HTTPS failed, try HTTP as fallback (certificate might not be ready yet)
+	log.Printf("[ENGINE] HTTPS health check failed, trying HTTP fallback: %s", httpURL)
+	for attempt := 1; attempt <= 3; attempt++ {
+		log.Printf("[ENGINE] Health check attempt %d/3 (HTTP fallback) for %s", attempt, httpURL)
+		
+		req, err := http.NewRequestWithContext(ctx, "GET", httpURL, nil)
+		if err != nil {
+			log.Printf("[ENGINE] WARNING - Failed to create HTTP health check request: %v", err)
+			if attempt < 3 {
+				time.Sleep(3 * time.Second)
+			}
+			continue
+		}
+		
+		req.Header.Set("User-Agent", "Stackyn-HealthCheck/1.0")
+		req.Header.Set("Accept", "*/*")
+		
+		// Use regular HTTP client for HTTP (no TLS)
+		httpClient := &http.Client{
+			Timeout: 15 * time.Second,
+		}
+		
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			log.Printf("[ENGINE] HTTP health check attempt %d failed: %v", attempt, err)
+			if resp != nil {
+				resp.Body.Close()
+			}
+			if attempt < 3 {
+				time.Sleep(3 * time.Second)
+			}
+			continue
+		}
+		
+		resp.Body.Close()
+		log.Printf("[ENGINE] Health check passed (HTTP) - Container responded with status %d (HTTPS cert may still be generating)", resp.StatusCode)
+		return true
+	}
+	
+	log.Printf("[ENGINE] Health check failed - Container did not respond after %d HTTPS attempts and 3 HTTP fallback attempts", maxRetries)
 	return false
 }
