@@ -488,8 +488,8 @@ export default function AppDetailsPage() {
                   <div className="space-y-3">
                     {deployments.map((deployment) => {
                       const isActive = deployment.id.toString() === app.deployment?.active_deployment_id?.replace('dep_', '');
-                      const isSuccess = deployment.status === 'running' || deployment.status === 'healthy';
-                      const isFailed = deployment.status === 'failed' || deployment.status === 'error';
+                      const isSuccess = deployment.status === 'running';
+                      const isFailed = deployment.status === 'failed';
                       
                       return (
                         <Link
