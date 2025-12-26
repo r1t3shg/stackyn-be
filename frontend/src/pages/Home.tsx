@@ -19,8 +19,6 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -44,34 +42,6 @@ export default function Home() {
     }
   };
 
-  const handleRedeploy = async (appId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      setActionLoading(appId);
-      await appsApi.redeploy(appId);
-      // Reload apps to get updated status
-      await loadApps();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to redeploy app');
-      console.error('Error redeploying app:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDelete = async (appId: string) => {
-    try {
-      setActionLoading(appId);
-      await appsApi.delete(appId);
-      setDeleteConfirmId(null);
-      await loadApps();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete app');
-      console.error('Error deleting app:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   // Filter and sort apps
   const filteredAndSortedApps = useMemo(() => {
@@ -148,10 +118,6 @@ export default function Home() {
     }
   };
 
-  const getEnvironment = (): string => {
-    // For now, we'll use production as default. This can be enhanced later with actual environment field
-    return 'production';
-  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -382,12 +348,6 @@ export default function Home() {
                       </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                      Environment
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                      Resources
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
                       Live URL
                     </th>
                     <th
@@ -408,9 +368,6 @@ export default function Home() {
                         )}
                       </div>
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                      Actions
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--border-subtle)]">
@@ -426,23 +383,6 @@ export default function Home() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <StatusBadge status={app.status || 'unknown'} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium rounded bg-[var(--primary-muted)] text-[var(--primary)]">
-                          {getEnvironment()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-secondary)]">
-                        {app.deployment?.resource_limits ? (
-                          <div>
-                            <div>{app.deployment.resource_limits.memory_mb}MB RAM</div>
-                            <div className="text-xs text-[var(--text-muted)]">
-                              {app.deployment.resource_limits.cpu} CPU
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[var(--text-muted)]">—</span>
-                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {app.url ? (
@@ -464,76 +404,6 @@ export default function Home() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-secondary)]">
                         {formatDate(app.deployment?.last_deployed_at || app.updated_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => navigate(`/apps/${app.id}`)}
-                            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--elevated)] rounded transition-colors"
-                            title="View Details"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => navigate(`/apps/${app.id}/deployments/${app.deployment?.active_deployment_id || ''}`)}
-                            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--elevated)] rounded transition-colors"
-                            title="View Logs"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => handleRedeploy(app.id, e)}
-                            disabled={actionLoading === app.id}
-                            className="p-2 text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--elevated)] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Redeploy"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => navigate(`/apps/${app.id}`)}
-                            className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--elevated)] rounded transition-colors"
-                            title="Settings"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                          </button>
-                          {deleteConfirmId === app.id ? (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => handleDelete(app.id)}
-                                disabled={actionLoading === app.id}
-                                className="px-2 py-1 text-xs bg-[var(--error)] hover:bg-[var(--error)]/80 text-white rounded transition-colors disabled:opacity-50"
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirmId(null)}
-                                className="px-2 py-1 text-xs bg-[var(--surface)] hover:bg-[var(--elevated)] text-[var(--text-primary)] border border-[var(--border-subtle)] rounded transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => setDeleteConfirmId(app.id)}
-                              className="p-2 text-[var(--text-secondary)] hover:text-[var(--error)] hover:bg-[var(--elevated)] rounded transition-colors"
-                              title="Delete"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
                       </td>
                     </tr>
                   ))}
