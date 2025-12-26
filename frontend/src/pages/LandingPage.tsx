@@ -695,28 +695,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* What We Don't Charge For Section */}
-          <div className="mb-20 p-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--elevated)]">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-6 text-center">
-              What Stackyn Does NOT Charge For
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
-              <div className="text-center">
-                <div className="text-[var(--text-secondary)]">Bandwidth (within fair use)</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[var(--text-secondary)]">SSL certificates</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[var(--text-secondary)]">Redeploys</div>
-              </div>
-            <div className="text-center">
-                <div className="text-[var(--text-secondary)]">App restarts</div>
-              </div>
-            </div>
-            <p className="text-center text-[var(--text-primary)] font-semibold mt-6">No hidden fees.</p>
-          </div>
-
           {/* FAQ Section */}
           <div className="mb-20">
             <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] text-center mb-12">
