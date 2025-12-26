@@ -86,16 +86,6 @@ export default function SignUp() {
     }
   };
 
-  const handleGitHubSignUp = () => {
-    // Placeholder for GitHub OAuth
-    alert('GitHub sign-up coming soon! For now, please use email and password.');
-  };
-
-  const handleGitLabSignUp = () => {
-    // Placeholder for GitLab OAuth
-    alert('GitLab sign-up coming soon! For now, please use email and password.');
-  };
-
   // Show loading state while checking auth
   if (isLoading) {
     return (
