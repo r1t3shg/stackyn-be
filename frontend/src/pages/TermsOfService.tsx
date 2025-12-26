@@ -17,37 +17,85 @@ export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
       {/* Header */}
-      <header className="border-b border-[var(--border-subtle)] bg-[var(--surface)] sticky top-0 z-50">
+      <header className="border-b border-[var(--border-subtle)] bg-[var(--app-bg)] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Logo />
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link
-                to="/terms"
-                className="text-[var(--primary)] font-medium"
+            <div className="flex items-center gap-8">
+              {/* Logo */}
+              <div className="flex-shrink-0">
+                <Logo />
+              </div>
+
+              {/* Desktop Navigation Links - Left Aligned */}
+              <nav className="hidden md:flex items-center space-x-6">
+                <a
+                  href="/#why-stackyn"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                >
+                  Why Stackyn?
+                </a>
+                <a
+                  href="/#features"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                >
+                  Features
+                </a>
+                <Link
+                  to="/pricing"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                >
+                  Pricing
+                </Link>
+              </nav>
+            </div>
+
+            {/* Desktop CTA - Right Side */}
+            <div className="hidden md:flex items-center gap-3">
+              {user ? (
+                <>
+                  <a
+                    href="https://console.staging.stackyn.com/"
+                    className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
+                  >
+                    Go to Console
+                  </a>
+                  <button
+                    className="w-10 h-10 rounded-full bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] font-semibold hover:bg-[var(--elevated)] transition-colors"
+                    aria-label="User menu"
+                  >
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                  </button>
+                </>
+              ) : (
+                <a
+                  href="/login"
+                  onClick={handleSignInClick}
+                  className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  Sign in
+                </a>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden flex items-center">
+              <button
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-2"
+                aria-label="Toggle menu"
               >
-                Terms of Service
-              </Link>
-              <Link
-                to="/privacy"
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                to="/pricing"
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
-              >
-                Pricing
-              </Link>
-            </nav>
-            <a
-              href={user ? "https://console.staging.stackyn.com/" : "/login"}
-              onClick={handleSignInClick}
-              className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
-            >
-              Sign in
-            </a>
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -157,8 +205,18 @@ export default function TermsOfService() {
       {/* Footer */}
       <footer className="bg-[var(--sidebar)] text-[var(--text-muted)] py-12 mt-16 border-t border-[var(--border-subtle)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-sm">
-            <p>&copy; {new Date().getFullYear()} Stackyn. All rights reserved.</p>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="text-sm">
+              <p>&copy; {new Date().getFullYear()} Stackyn. All rights reserved.</p>
+            </div>
+            <div className="flex items-center gap-6 text-sm">
+              <Link to="/terms" className="hover:text-[var(--text-primary)] transition-colors">
+                Terms of Service
+              </Link>
+              <Link to="/privacy" className="hover:text-[var(--text-primary)] transition-colors">
+                Privacy Policy
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

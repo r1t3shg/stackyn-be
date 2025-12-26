@@ -23,36 +23,61 @@ export default function LandingPage() {
       <header className="border-b border-[var(--border-subtle)] bg-[var(--app-bg)] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex-shrink-0">
-              <Logo />
+            <div className="flex items-center gap-8">
+              {/* Logo */}
+              <div className="flex-shrink-0">
+                <Logo />
+              </div>
+
+              {/* Desktop Navigation Links - Left Aligned */}
+              <nav className="hidden md:flex items-center space-x-6">
+                <a
+                  href="#why-stackyn"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                >
+                  Why Stackyn?
+                </a>
+                <a
+                  href="#features"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                >
+                  Features
+                </a>
+                <Link
+                  to="/pricing"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                >
+                  Pricing
+                </Link>
+              </nav>
             </div>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link
-                to="/pricing"
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
-              >
-                Pricing
-              </Link>
-              <Link
-                to="/terms"
-                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
-              >
-                Terms
-              </Link>
-            </nav>
-
-            {/* Desktop Sign In CTA */}
-            <div className="hidden md:flex items-center">
-              <a
-                href={user ? "https://console.staging.stackyn.com/" : "/login"}
-                onClick={handleSignInClick}
-                className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
-              >
-                Sign in
-              </a>
+            {/* Desktop CTA - Right Side */}
+            <div className="hidden md:flex items-center gap-3">
+              {user ? (
+                <>
+                  <a
+                    href="https://console.staging.stackyn.com/"
+                    className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
+                  >
+                    Go to Console
+                  </a>
+                  <button
+                    className="w-10 h-10 rounded-full bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] font-semibold hover:bg-[var(--elevated)] transition-colors"
+                    aria-label="User menu"
+                  >
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                  </button>
+                </>
+              ) : (
+                <a
+                  href="/login"
+                  onClick={handleSignInClick}
+                  className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
+                >
+                  Sign in
+                </a>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -85,6 +110,20 @@ export default function LandingPage() {
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-[var(--border-subtle)]">
               <nav className="flex flex-col space-y-4">
+                <a
+                  href="#why-stackyn"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Why Stackyn?
+                </a>
+                <a
+                  href="#features"
+                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Features
+                </a>
                 <Link
                   to="/pricing"
                   className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
@@ -92,20 +131,24 @@ export default function LandingPage() {
                 >
                   Pricing
                 </Link>
-                <Link
-                  to="/terms"
-                  className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Terms
-                </Link>
-                <a
-                  href={user ? "https://console.staging.stackyn.com/" : "/login"}
-                  onClick={handleSignInClick}
-                  className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors text-center"
-                >
-                  Sign in
-                </a>
+                {user ? (
+                  <>
+                    <a
+                      href="https://console.staging.stackyn.com/"
+                      className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors text-center"
+                    >
+                      Go to Console
+                    </a>
+                  </>
+                ) : (
+                  <a
+                    href="/login"
+                    onClick={handleSignInClick}
+                    className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors text-center"
+                  >
+                    Sign in
+                  </a>
+                )}
               </nav>
             </div>
           )}
@@ -207,7 +250,7 @@ export default function LandingPage() {
       </section>
 
       {/* Core Features Section */}
-      <section className="py-24 bg-[var(--surface)]">
+      <section id="features" className="py-24 bg-[var(--surface)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--text-primary)] mb-4">
@@ -292,7 +335,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why Stackyn Section */}
-      <section className="py-24 bg-[var(--app-bg)]">
+      <section id="why-stackyn" className="py-24 bg-[var(--app-bg)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--text-primary)] mb-6">
@@ -592,7 +635,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="mb-4">
-                <Logo height={20} />
+                <Logo height={20} showText={false} />
               </div>
               <p className="text-sm text-[var(--text-secondary)]">
                 Deploy your backend apps in one click — no DevOps, no servers, no hassle.
@@ -619,13 +662,8 @@ export default function LandingPage() {
               </ul>
             </div>
             <div>
-              <h4 className="text-[var(--text-primary)] font-semibold mb-4">Company</h4>
+              <h4 className="text-[var(--text-primary)] font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li>
-                  <a href="#" className="hover:text-[var(--text-primary)] transition-colors">
-                    Contact
-                  </a>
-                </li>
                 <li>
                   <Link to="/terms" className="hover:text-[var(--text-primary)] transition-colors">
                     Terms of Service
@@ -635,6 +673,11 @@ export default function LandingPage() {
                   <Link to="/privacy" className="hover:text-[var(--text-primary)] transition-colors">
                     Privacy Policy
                   </Link>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-[var(--text-primary)] transition-colors">
+                    Contact
+                  </a>
                 </li>
               </ul>
             </div>
