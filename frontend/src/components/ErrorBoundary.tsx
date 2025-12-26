@@ -26,10 +26,10 @@ class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h1>
-            <p className="text-gray-700 mb-4">
+        <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-6">
+            <h1 className="text-2xl font-bold text-[var(--error)] mb-4">Something went wrong</h1>
+            <p className="text-[var(--text-primary)] mb-4">
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
             <button
@@ -37,13 +37,13 @@ class ErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-4 rounded-lg transition-colors"
             >
               Reload Page
             </button>
             <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-gray-600">Error Details</summary>
-              <pre className="mt-2 text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40">
+              <summary className="cursor-pointer text-sm text-[var(--text-secondary)]">Error Details</summary>
+              <pre className="mt-2 text-xs bg-[var(--elevated)] text-[var(--text-primary)] p-2 rounded overflow-auto max-h-40 border border-[var(--border-subtle)]">
                 {this.state.error?.stack}
               </pre>
             </details>

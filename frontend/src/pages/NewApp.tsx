@@ -33,27 +33,27 @@ export default function NewAppPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--app-bg)]">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           to="/"
-          className="text-blue-600 hover:text-blue-800 mb-6 inline-block"
+          className="text-[var(--info)] hover:text-[var(--primary)] mb-6 inline-block transition-colors"
         >
           ← Back to Apps
         </Link>
 
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Create New Application</h1>
+        <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8">
+          <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-6">Create New Application</h1>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <p className="text-red-800">{error}</p>
+            <div className="bg-[var(--error)]/10 border border-[var(--error)] rounded-lg p-4 mb-6">
+              <p className="text-[var(--error)]">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 App Name
               </label>
               <input
@@ -62,13 +62,13 @@ export default function NewAppPage() {
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full px-4 py-2 bg-[var(--elevated)] border border-[var(--border-subtle)] rounded-lg focus:ring-2 focus:ring-[var(--focus-border)] focus:border-[var(--focus-border)] text-[var(--text-primary)]"
                 placeholder="my-awesome-app"
               />
             </div>
 
             <div>
-              <label htmlFor="repo_url" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="repo_url" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Repository URL
               </label>
               <input
@@ -77,16 +77,16 @@ export default function NewAppPage() {
                 required
                 value={formData.repo_url}
                 onChange={(e) => setFormData({ ...formData, repo_url: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full px-4 py-2 bg-[var(--elevated)] border border-[var(--border-subtle)] rounded-lg focus:ring-2 focus:ring-[var(--focus-border)] focus:border-[var(--focus-border)] text-[var(--text-primary)]"
                 placeholder="https://github.com/username/repo.git"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 Make sure your repository contains a Dockerfile in the root directory
               </p>
             </div>
 
             <div>
-              <label htmlFor="branch" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="branch" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Branch
               </label>
               <input
@@ -95,7 +95,7 @@ export default function NewAppPage() {
                 required
                 value={formData.branch}
                 onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full px-4 py-2 bg-[var(--elevated)] border border-[var(--border-subtle)] rounded-lg focus:ring-2 focus:ring-[var(--focus-border)] focus:border-[var(--focus-border)] text-[var(--text-primary)]"
                 placeholder="main"
               />
             </div>
@@ -103,14 +103,14 @@ export default function NewAppPage() {
             <div className="flex items-center justify-end space-x-4">
               <Link
                 to="/"
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] hover:bg-[var(--elevated)] transition-colors"
               >
                 Cancel
               </Link>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating...' : 'Create App'}
               </button>

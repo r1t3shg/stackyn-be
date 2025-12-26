@@ -47,10 +47,10 @@ export default function DeploymentDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading deployment...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+          <p className="mt-4 text-[var(--text-secondary)]">Loading deployment...</p>
         </div>
       </div>
     );
@@ -58,16 +58,16 @@ export default function DeploymentDetailsPage() {
 
   if (error || !deployment) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--app-bg)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Link
             to={`/apps/${appId}`}
-            className="text-blue-600 hover:text-blue-800 mb-6 inline-block"
+            className="text-[var(--info)] hover:text-[var(--primary)] mb-6 inline-block transition-colors"
           >
             ← Back to App
           </Link>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-800">{error || 'Deployment not found'}</p>
+          <div className="bg-[var(--error)]/10 border border-[var(--error)] rounded-lg p-6">
+            <p className="text-[var(--error)]">{error || 'Deployment not found'}</p>
           </div>
         </div>
       </div>
@@ -75,19 +75,19 @@ export default function DeploymentDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--app-bg)]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           to={`/apps/${appId}`}
-          className="text-blue-600 hover:text-blue-800 mb-6 inline-block"
+          className="text-[var(--info)] hover:text-[var(--primary)] mb-6 inline-block transition-colors"
         >
           ← Back to App
         </Link>
 
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+        <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 mb-6">
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
                 Deployment #{deployment.id}
               </h1>
               <StatusBadge status={deployment.status} />
@@ -96,50 +96,50 @@ export default function DeploymentDetailsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">App ID</h3>
-              <p className="text-gray-900">{deployment.app_id}</p>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">App ID</h3>
+              <p className="text-[var(--text-primary)]">{deployment.app_id}</p>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Status</h3>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Status</h3>
               <StatusBadge status={deployment.status} />
             </div>
             {extractString(deployment.subdomain) && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Subdomain</h3>
-                <p className="text-gray-900">{extractString(deployment.subdomain)}</p>
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Subdomain</h3>
+                <p className="text-[var(--text-primary)]">{extractString(deployment.subdomain)}</p>
               </div>
             )}
             {extractString(deployment.image_name) && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Image Name</h3>
-                <p className="text-gray-900 font-mono text-sm">{extractString(deployment.image_name)}</p>
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Image Name</h3>
+                <p className="text-[var(--text-primary)] font-mono text-sm">{extractString(deployment.image_name)}</p>
               </div>
             )}
             {extractString(deployment.container_id) && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Container ID</h3>
-                <p className="text-gray-900 font-mono text-sm">{extractString(deployment.container_id)}</p>
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Container ID</h3>
+                <p className="text-[var(--text-primary)] font-mono text-sm">{extractString(deployment.container_id)}</p>
               </div>
             )}
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Created</h3>
-              <p className="text-gray-900">
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Created</h3>
+              <p className="text-[var(--text-primary)]">
                 {new Date(deployment.created_at).toLocaleString()}
               </p>
             </div>
 
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Updated</h3>
-              <p className="text-gray-900">
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Updated</h3>
+              <p className="text-[var(--text-primary)]">
                 {new Date(deployment.updated_at).toLocaleString()}
               </p>
             </div>
           </div>
 
           {logs?.error_message && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <h3 className="text-sm font-medium text-red-800 mb-2">Error Message</h3>
-              <p className="text-red-800">{extractString(logs.error_message)}</p>
+            <div className="mt-6 p-4 bg-[var(--error)]/10 border border-[var(--error)] rounded-lg">
+              <h3 className="text-sm font-medium text-[var(--error)] mb-2">Error Message</h3>
+              <p className="text-[var(--error)]">{extractString(logs.error_message)}</p>
             </div>
           )}
         </div>
@@ -147,27 +147,27 @@ export default function DeploymentDetailsPage() {
         <div className="space-y-6">
           {logs && extractString(logs.build_log) && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Build Logs</h2>
+              <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">Build Logs</h2>
               <LogsViewer logs={extractString(logs.build_log)} title="Build Logs" />
             </div>
           )}
 
           {logs && !extractString(logs.build_log) && (
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <p className="text-gray-600">No build logs available yet</p>
+            <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 text-center">
+              <p className="text-[var(--text-secondary)]">No build logs available yet</p>
             </div>
           )}
 
           {logs && extractString(logs.runtime_log) && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Runtime Logs</h2>
+              <h2 className="text-xl font-bold text-[var(--text-primary)] mb-4">Runtime Logs</h2>
               <LogsViewer logs={extractString(logs.runtime_log)} title="Runtime Logs" />
             </div>
           )}
 
           {logs && !extractString(logs.runtime_log) && (
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <p className="text-gray-600">No runtime logs available yet</p>
+            <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 text-center">
+              <p className="text-[var(--text-secondary)]">No runtime logs available yet</p>
             </div>
           )}
         </div>

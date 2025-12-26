@@ -14,30 +14,30 @@ export default function PrivacyPolicy() {
     }
   };
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--app-bg)]">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
+      <header className="border-b border-[var(--border-subtle)] bg-[var(--surface)] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="text-2xl font-bold text-gray-900">
+            <Link to="/" className="text-2xl font-bold text-[var(--text-primary)]">
               Stackyn
             </Link>
             <nav className="hidden md:flex items-center space-x-8">
               <Link
                 to="/terms"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
               >
                 Terms of Service
               </Link>
               <Link
                 to="/privacy"
-                className="text-blue-600 font-medium"
+                className="text-[var(--primary)] font-medium"
               >
                 Privacy Policy
               </Link>
               <Link
                 to="/pricing"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium"
               >
                 Pricing
               </Link>
@@ -45,7 +45,7 @@ export default function PrivacyPolicy() {
             <a
               href={user ? "https://console.staging.stackyn.com/" : "/login"}
               onClick={handleSignInClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              className="bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium py-2 px-6 rounded-lg transition-colors"
             >
               Sign in
             </a>
@@ -55,13 +55,13 @@ export default function PrivacyPolicy() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
+        <h1 className="text-4xl font-bold text-[var(--text-primary)] mb-8">Privacy Policy</h1>
         <div className="prose prose-lg max-w-none">
-          <p className="text-gray-600 mb-6">Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-[var(--text-secondary)] mb-6">Last updated: {new Date().toLocaleDateString()}</p>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">1. Introduction</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               Stackyn ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy
               explains how we collect, use, disclose, and safeguard your information when you use our
               Platform-as-a-Service.
@@ -69,9 +69,9 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Information We Collect</h2>
-            <p className="text-gray-700 mb-4">We collect information that you provide directly to us:</p>
-            <ul className="list-disc list-inside text-gray-700 mb-4 space-y-2">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">2. Information We Collect</h2>
+            <p className="text-[var(--text-primary)] mb-4">We collect information that you provide directly to us:</p>
+            <ul className="list-disc list-inside text-[var(--text-primary)] mb-4 space-y-2">
               <li><strong>Account Information:</strong> Email address, password, and other registration details</li>
               <li><strong>Application Data:</strong> Information about your applications, deployments, and configurations</li>
               <li><strong>Usage Data:</strong> Information about how you use the Service, including logs and metrics</li>
@@ -80,9 +80,9 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">3. How We Use Your Information</h2>
-            <p className="text-gray-700 mb-4">We use the information we collect to:</p>
-            <ul className="list-disc list-inside text-gray-700 mb-4 space-y-2">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">3. How We Use Your Information</h2>
+            <p className="text-[var(--text-primary)] mb-4">We use the information we collect to:</p>
+            <ul className="list-disc list-inside text-[var(--text-primary)] mb-4 space-y-2">
               <li>Provide, maintain, and improve our Service</li>
               <li>Process transactions and send related information</li>
               <li>Send technical notices, updates, and support messages</li>
@@ -93,12 +93,12 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">4. Information Sharing and Disclosure</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">4. Information Sharing and Disclosure</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               We do not sell, trade, or rent your personal information to third parties. We may share your
               information only in the following circumstances:
             </p>
-            <ul className="list-disc list-inside text-gray-700 mb-4 space-y-2">
+            <ul className="list-disc list-inside text-[var(--text-primary)] mb-4 space-y-2">
               <li><strong>Service Providers:</strong> With third-party vendors who perform services on our behalf</li>
               <li><strong>Legal Requirements:</strong> When required by law or to protect our rights</li>
               <li><strong>Business Transfers:</strong> In connection with any merger, sale, or acquisition</li>
@@ -107,8 +107,8 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">5. Data Security</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">5. Data Security</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               We implement appropriate technical and organizational security measures to protect your personal
               information. However, no method of transmission over the Internet or electronic storage is
               100% secure, and we cannot guarantee absolute security.
@@ -116,8 +116,8 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Data Retention</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">6. Data Retention</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               We retain your personal information for as long as necessary to provide the Service and
               fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is
               required or permitted by law.
@@ -125,9 +125,9 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Your Rights</h2>
-            <p className="text-gray-700 mb-4">You have the right to:</p>
-            <ul className="list-disc list-inside text-gray-700 mb-4 space-y-2">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">7. Your Rights</h2>
+            <p className="text-[var(--text-primary)] mb-4">You have the right to:</p>
+            <ul className="list-disc list-inside text-[var(--text-primary)] mb-4 space-y-2">
               <li>Access and receive a copy of your personal information</li>
               <li>Rectify inaccurate or incomplete information</li>
               <li>Request deletion of your personal information</li>
@@ -138,8 +138,8 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Cookies and Tracking Technologies</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">8. Cookies and Tracking Technologies</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               We use cookies and similar tracking technologies to track activity on our Service and hold
               certain information. You can instruct your browser to refuse all cookies or to indicate when
               a cookie is being sent.
@@ -147,8 +147,8 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Third-Party Links</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">9. Third-Party Links</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               Our Service may contain links to third-party websites or services. We are not responsible
               for the privacy practices of these third parties. We encourage you to read their privacy
               policies.
@@ -156,8 +156,8 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Children's Privacy</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">10. Children's Privacy</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               Our Service is not intended for children under the age of 13. We do not knowingly collect
               personal information from children under 13. If you are a parent or guardian and believe
               your child has provided us with personal information, please contact us.
@@ -165,16 +165,16 @@ export default function PrivacyPolicy() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Changes to This Privacy Policy</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">11. Changes to This Privacy Policy</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               We may update our Privacy Policy from time to time. We will notify you of any changes by
               posting the new Privacy Policy on this page and updating the "Last updated" date.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Contact Us</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-[var(--text-primary)] mb-4">12. Contact Us</h2>
+            <p className="text-[var(--text-primary)] mb-4">
               If you have any questions about this Privacy Policy, please contact us through our support
               channels.
             </p>
@@ -183,7 +183,7 @@ export default function PrivacyPolicy() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12 mt-16">
+      <footer className="bg-[var(--sidebar)] text-[var(--text-muted)] py-12 mt-16 border-t border-[var(--border-subtle)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-sm">
             <p>&copy; {new Date().getFullYear()} Stackyn. All rights reserved.</p>

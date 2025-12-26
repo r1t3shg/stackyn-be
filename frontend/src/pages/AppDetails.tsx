@@ -146,10 +146,10 @@ export default function AppDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading app...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary)]"></div>
+          <p className="mt-4 text-[var(--text-secondary)]">Loading app...</p>
         </div>
       </div>
     );
@@ -157,13 +157,13 @@ export default function AppDetailsPage() {
 
   if (error || !app) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[var(--app-bg)]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Link to="/" className="text-blue-600 hover:text-blue-800 mb-6 inline-block">
+          <Link to="/" className="text-[var(--info)] hover:text-[var(--primary)] mb-6 inline-block transition-colors">
             ← Back to Apps
           </Link>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-800">{error || 'App not found'}</p>
+          <div className="bg-[var(--error)]/10 border border-[var(--error)] rounded-lg p-6">
+            <p className="text-[var(--error)]">{error || 'App not found'}</p>
           </div>
         </div>
       </div>
@@ -171,29 +171,29 @@ export default function AppDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--app-bg)]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link to="/" className="text-blue-600 hover:text-blue-800 mb-6 inline-block">
+        <Link to="/" className="text-[var(--info)] hover:text-[var(--primary)] mb-6 inline-block transition-colors">
           ← Back to Apps
         </Link>
 
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+        <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 mb-6">
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{app.name}</h1>
+              <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">{app.name}</h1>
               <StatusBadge status={app.status} />
             </div>
             <div className="flex space-x-3">
               <button
                 onClick={handleRedeploy}
                 disabled={redeploying}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {redeploying ? 'Redeploying...' : 'Redeploy'}
               </button>
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--error)] hover:bg-[var(--error)]/80 text-white font-medium rounded-lg transition-colors"
               >
                 Delete
               </button>
@@ -202,49 +202,49 @@ export default function AppDetailsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Repository URL</h3>
-              <p className="text-gray-900">{app.repo_url}</p>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Repository URL</h3>
+              <p className="text-[var(--text-primary)]">{app.repo_url}</p>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Branch</h3>
-              <p className="text-gray-900">{app.branch}</p>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Branch</h3>
+              <p className="text-[var(--text-primary)]">{app.branch}</p>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">App URL</h3>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">App URL</h3>
               {app.url ? (
                 <a
                   href={app.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-[var(--info)] hover:text-[var(--primary)] transition-colors"
                 >
                   {app.url}
                 </a>
               ) : (
-                <p className="text-gray-500">Not deployed yet</p>
+                <p className="text-[var(--text-muted)]">Not deployed yet</p>
               )}
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-500 mb-1">Created</h3>
-              <p className="text-gray-900">
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-1">Created</h3>
+              <p className="text-[var(--text-primary)]">
                 {new Date(app.created_at).toLocaleString()}
               </p>
             </div>
           </div>
 
           {app.deployment && (
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Latest Deployment</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
+            <div className="border-t border-[var(--border-subtle)] pt-6">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">Latest Deployment</h3>
+              <div className="bg-[var(--elevated)] rounded-lg p-4 border border-[var(--border-subtle)]">
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-sm text-gray-500">Status</p>
+                    <p className="text-sm text-[var(--text-muted)]">Status</p>
                     <StatusBadge status={app.deployment.state} />
                   </div>
                   {app.deployment.last_deployed_at && (
                     <div>
-                      <p className="text-sm text-gray-500">Last Deployed</p>
-                      <p className="text-gray-900">
+                      <p className="text-sm text-[var(--text-muted)]">Last Deployed</p>
+                      <p className="text-[var(--text-primary)]">
                         {new Date(app.deployment.last_deployed_at).toLocaleString()}
                       </p>
                     </div>
@@ -252,24 +252,24 @@ export default function AppDetailsPage() {
                 </div>
                 
                 {app.deployment.resource_limits && (
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Resource Limits</h4>
+                  <div className="border-t border-[var(--border-subtle)] pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Resource Limits</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-1">Memory</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                      <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border-subtle)]">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Memory</p>
+                        <p className="text-lg font-semibold text-[var(--text-primary)]">
                           {app.deployment.resource_limits.memory_mb} MB
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-1">CPU</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                      <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border-subtle)]">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">CPU</p>
+                        <p className="text-lg font-semibold text-[var(--text-primary)]">
                           {app.deployment.resource_limits.cpu.toFixed(2)} vCPU
                         </p>
                       </div>
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-1">Disk</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                      <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border-subtle)]">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Disk</p>
+                        <p className="text-lg font-semibold text-[var(--text-primary)]">
                           {app.deployment.resource_limits.disk_gb} GB
                         </p>
                       </div>
@@ -278,72 +278,72 @@ export default function AppDetailsPage() {
                 )}
                 
                 {app.deployment.usage_stats && (
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Resource Usage</h4>
+                  <div className="border-t border-[var(--border-subtle)] pt-4 mt-4">
+                    <h4 className="text-sm font-semibold text-[var(--text-secondary)] mb-3">Resource Usage</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {/* Memory Usage */}
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border-subtle)]">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-gray-500">Memory Usage</p>
-                          <p className="text-xs font-semibold text-gray-900">
+                          <p className="text-xs text-[var(--text-muted)]">Memory Usage</p>
+                          <p className="text-xs font-semibold text-[var(--text-primary)]">
                             {app.deployment.usage_stats.memory_usage_percent.toFixed(1)}%
                           </p>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+                        <div className="w-full bg-[var(--elevated)] rounded-full h-2 mb-1">
                           <div
                             className={`h-2 rounded-full transition-all ${
                               app.deployment.usage_stats.memory_usage_percent > 90
-                                ? 'bg-red-500'
+                                ? 'bg-[var(--error)]'
                                 : app.deployment.usage_stats.memory_usage_percent > 70
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
+                                ? 'bg-[var(--warning)]'
+                                : 'bg-[var(--success)]'
                             }`}
                             style={{
                               width: `${Math.min(app.deployment.usage_stats.memory_usage_percent, 100)}%`,
                             }}
                           ></div>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-[var(--text-secondary)]">
                           {app.deployment.usage_stats.memory_usage_mb} MB /{' '}
                           {app.deployment.resource_limits?.memory_mb || 0} MB
                         </p>
                       </div>
                       
                       {/* Disk Usage */}
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border-subtle)]">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-gray-500">Disk Usage</p>
-                          <p className="text-xs font-semibold text-gray-900">
+                          <p className="text-xs text-[var(--text-muted)]">Disk Usage</p>
+                          <p className="text-xs font-semibold text-[var(--text-primary)]">
                             {app.deployment.usage_stats.disk_usage_percent.toFixed(1)}%
                           </p>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+                        <div className="w-full bg-[var(--elevated)] rounded-full h-2 mb-1">
                           <div
                             className={`h-2 rounded-full transition-all ${
                               app.deployment.usage_stats.disk_usage_percent > 90
-                                ? 'bg-red-500'
+                                ? 'bg-[var(--error)]'
                                 : app.deployment.usage_stats.disk_usage_percent > 70
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
+                                ? 'bg-[var(--warning)]'
+                                : 'bg-[var(--success)]'
                             }`}
                             style={{
                               width: `${Math.min(app.deployment.usage_stats.disk_usage_percent, 100)}%`,
                             }}
                           ></div>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-[var(--text-secondary)]">
                           {app.deployment.usage_stats.disk_usage_gb.toFixed(2)} GB /{' '}
                           {app.deployment.resource_limits?.disk_gb || 0} GB
                         </p>
                       </div>
                       
                       {/* Restart Count */}
-                      <div className="bg-white rounded-lg p-3 border border-gray-200">
-                        <p className="text-xs text-gray-500 mb-1">Restart Count</p>
-                        <p className="text-lg font-semibold text-gray-900">
+                      <div className="bg-[var(--surface)] rounded-lg p-3 border border-[var(--border-subtle)]">
+                        <p className="text-xs text-[var(--text-muted)] mb-1">Restart Count</p>
+                        <p className="text-lg font-semibold text-[var(--text-primary)]">
                           {app.deployment.usage_stats.restart_count}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
                           {app.deployment.usage_stats.restart_count === 0
                             ? 'No restarts'
                             : app.deployment.usage_stats.restart_count === 1
@@ -360,30 +360,30 @@ export default function AppDetailsPage() {
         </div>
 
         {/* Environment Variables Section */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+        <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Environment Variables</h2>
+            <h2 className="text-2xl font-bold text-[var(--text-primary)]">Environment Variables</h2>
             <button
               onClick={() => setShowAddEnvVar(!showAddEnvVar)}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium rounded-lg transition-colors"
             >
               {showAddEnvVar ? 'Cancel' : '+ Add Variable'}
             </button>
           </div>
 
           {envVarsError && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <p className="text-yellow-800 text-sm">
+            <div className="bg-[var(--warning)]/10 border border-[var(--warning)] rounded-lg p-4 mb-4">
+              <p className="text-[var(--warning)] text-sm">
                 <strong>Warning:</strong> {envVarsError}
               </p>
             </div>
           )}
 
           {!loadingEnvVars && showAddEnvVar && (
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="bg-[var(--elevated)] rounded-lg p-4 mb-4 border border-[var(--border-subtle)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Key
                   </label>
                   <input
@@ -391,11 +391,11 @@ export default function AppDetailsPage() {
                     value={newEnvKey}
                     onChange={(e) => setNewEnvKey(e.target.value)}
                     placeholder="e.g., DATABASE_URL"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)] text-[var(--text-primary)]"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                     Value
                   </label>
                   <input
@@ -403,14 +403,14 @@ export default function AppDetailsPage() {
                     value={newEnvValue}
                     onChange={(e) => setNewEnvValue(e.target.value)}
                     placeholder="e.g., postgres://..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--focus-border)] text-[var(--text-primary)]"
                   />
                 </div>
               </div>
               <button
                 onClick={handleAddEnvVar}
                 disabled={addingEnvVar || !newEnvKey.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-[var(--app-bg)] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {addingEnvVar ? 'Adding...' : 'Add Variable'}
               </button>
@@ -418,12 +418,12 @@ export default function AppDetailsPage() {
           )}
 
           {loadingEnvVars ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mb-2"></div>
+            <div className="text-center py-8 text-[var(--text-muted)]">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--primary)] mb-2"></div>
               <p>Loading environment variables...</p>
             </div>
           ) : !envVars || envVars.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-[var(--text-muted)]">
               <p>No environment variables configured</p>
               <p className="text-sm mt-2">Add environment variables that will be injected into your running container</p>
             </div>
@@ -432,18 +432,18 @@ export default function AppDetailsPage() {
               {envVars.map((envVar) => (
                 <div
                   key={envVar.id}
-                  className="flex items-center justify-between bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-between bg-[var(--elevated)] rounded-lg p-4 hover:bg-[var(--elevated)]/80 border border-[var(--border-subtle)] transition-colors"
                 >
                   <div className="flex-1">
                     <div className="flex items-center space-x-4">
-                      <span className="font-mono font-semibold text-gray-900">{envVar.key}</span>
-                      <span className="text-gray-400">=</span>
-                      <span className="font-mono text-gray-600">{envVar.value}</span>
+                      <span className="font-mono font-semibold text-[var(--text-primary)]">{envVar.key}</span>
+                      <span className="text-[var(--text-muted)]">=</span>
+                      <span className="font-mono text-[var(--text-secondary)]">{envVar.value}</span>
                     </div>
                   </div>
                   <button
                     onClick={() => handleDeleteEnvVar(envVar.key)}
-                    className="ml-4 px-3 py-1 text-sm bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                    className="ml-4 px-3 py-1 text-sm bg-[var(--error)] hover:bg-[var(--error)]/80 text-white rounded transition-colors"
                   >
                     Delete
                   </button>
@@ -454,10 +454,10 @@ export default function AppDetailsPage() {
         </div>
 
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Deployments</h2>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">Deployments</h2>
           {deployments && deployments.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <p className="text-gray-600">No deployments found</p>
+            <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 text-center">
+              <p className="text-[var(--text-secondary)]">No deployments found</p>
             </div>
           ) : (
             <div className="space-y-4">
