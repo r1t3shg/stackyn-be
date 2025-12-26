@@ -148,7 +148,7 @@ export default function Home() {
     }
   };
 
-  const getEnvironment = (app: App): string => {
+  const getEnvironment = (): string => {
     // For now, we'll use production as default. This can be enhanced later with actual environment field
     return 'production';
   };
@@ -429,7 +429,7 @@ export default function Home() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 py-1 text-xs font-medium rounded bg-[var(--primary-muted)] text-[var(--primary)]">
-                          {getEnvironment(app)}
+                          {getEnvironment()}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-secondary)]">

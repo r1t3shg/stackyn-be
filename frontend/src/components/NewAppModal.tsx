@@ -5,9 +5,10 @@ import { appsApi } from '@/lib/api';
 interface NewAppModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onAppCreated?: (appId: string) => void; // Optional callback for when an app is created
 }
 
-export default function NewAppModal({ isOpen, onClose }: NewAppModalProps) {
+export default function NewAppModal({ isOpen, onClose, onAppCreated }: NewAppModalProps) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -59,8 +60,12 @@ export default function NewAppModal({ isOpen, onClose }: NewAppModalProps) {
         setFormData({ name: '', repo_url: '', branch: 'main' });
         setError(null);
         onClose();
-        // Navigate to the new app details page
-        navigate(`/apps/${response.app.id}`);
+        // Call optional callback or navigate to the new app details page
+        if (onAppCreated) {
+          onAppCreated(response.app.id);
+        } else {
+          navigate(`/apps/${response.app.id}`);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create app');
