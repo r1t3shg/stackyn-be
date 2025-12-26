@@ -843,17 +843,17 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="bg-[var(--sidebar)] text-[var(--text-muted)] py-12 border-t border-[var(--border-subtle)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="mb-4">
-                <Logo height={20} showText={false} />
+                <Logo height={20} showText={true} />
               </div>
               <p className="text-sm text-[var(--text-secondary)]">
                 Deploy your backend apps in one click — no DevOps, no servers, no hassle.
               </p>
             </div>
             <div>
-              <h4 className="text-[var(--text-primary)] font-semibold mb-4">Product</h4>
+              <h4 className="text-[var(--text-primary)] font-semibold mb-4">Links</h4>
               <ul className="space-y-2 text-sm">
                 <li>
                   <a
@@ -867,21 +867,6 @@ export default function LandingPage() {
                     Pricing
                   </a>
                 </li>
-                <li>
-                  <a href="#" className="hover:text-[var(--text-primary)] transition-colors">
-                    Docs
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-[var(--text-primary)] transition-colors">
-                    Blog
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-[var(--text-primary)] font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm">
                 <li>
                   <Link to="/terms" className="hover:text-[var(--text-primary)] transition-colors">
                     Terms of Service
