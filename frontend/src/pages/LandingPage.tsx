@@ -183,12 +183,9 @@ export default function LandingPage() {
       <section className="relative overflow-hidden bg-[var(--surface)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
           <div className="text-center">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[var(--text-primary)] mb-6 leading-tight">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-[var(--text-primary)] mb-10 leading-tight">
               Deploy your backend apps in <span className="text-[var(--primary)]">one click</span> — no DevOps, no servers, no hassle.
             </h1>
-            <p className="text-xl sm:text-2xl text-[var(--text-secondary)] max-w-4xl mx-auto mb-10 leading-relaxed">
-              Stackyn lets developers and small teams launch APIs, web apps, and microservices directly from Git — instantly, securely, and reliably.
-            </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <a
                 href={user ? "https://console.staging.stackyn.com/" : "/signup"}
@@ -448,9 +445,6 @@ export default function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-semibold text-[var(--text-primary)] mb-4">
               Simple pricing. No surprises.
             </h2>
-            <p className="text-xl text-[var(--text-secondary)] max-w-3xl mx-auto">
-              Pay only for the resources your apps actually use.
-            </p>
           </div>
 
           {/* Plans Grid */}
@@ -698,33 +692,6 @@ export default function LandingPage() {
               >
                 Contact Us
               </a>
-            </div>
-          </div>
-
-          {/* What's Included Section */}
-          <div className="mb-20">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] mb-8 text-center">
-              What's Included in All Plans
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              <div className="text-center p-4">
-                <div className="text-[var(--text-secondary)]">Git-based deployments</div>
-              </div>
-              <div className="text-center p-4">
-                <div className="text-[var(--text-secondary)]">Zero DevOps setup</div>
-              </div>
-              <div className="text-center p-4">
-                <div className="text-[var(--text-secondary)]">Managed containers</div>
-              </div>
-              <div className="text-center p-4">
-                <div className="text-[var(--text-secondary)]">Automatic restarts</div>
-              </div>
-              <div className="text-center p-4">
-                <div className="text-[var(--text-secondary)]">Secure HTTPS URLs</div>
-              </div>
-              <div className="text-center p-4">
-                <div className="text-[var(--text-secondary)]">Simple dashboard</div>
-              </div>
             </div>
           </div>
 
