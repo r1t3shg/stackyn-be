@@ -13,14 +13,14 @@ export default function NewAppModal({ isOpen, onClose, onAppCreated }: NewAppMod
   const [formData, setFormData] = useState({
     name: '',
     repo_url: '',
-    branch: 'main',
+    branch: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({ name: '', repo_url: '', branch: 'main' });
+      setFormData({ name: '', repo_url: '', branch: '' });
       setError(null);
       onClose();
     }
@@ -57,7 +57,7 @@ export default function NewAppModal({ isOpen, onClose, onAppCreated }: NewAppMod
         setError(response.error);
       } else {
         // Reset form and close modal
-        setFormData({ name: '', repo_url: '', branch: 'main' });
+        setFormData({ name: '', repo_url: '', branch: '' });
         setError(null);
         onClose();
         // Call optional callback or navigate to the new app details page
