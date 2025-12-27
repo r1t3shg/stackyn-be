@@ -295,15 +295,19 @@ export default function AppDetailsPage() {
           {/* Runtime Information */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[var(--border-subtle)]">
             <div>
-              <div className="text-xs text-[var(--text-muted)] mb-1">RAM</div>
+              <div className="text-xs text-[var(--text-muted)] mb-1">RAM Used</div>
               <div className="text-lg font-semibold text-[var(--text-primary)]">
-                {app.deployment?.resource_limits?.memory_mb || '—'} MB
+                {app.deployment?.usage_stats?.memory_usage_mb 
+                  ? `${app.deployment.usage_stats.memory_usage_mb} MB`
+                  : '—'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-[var(--text-muted)] mb-1">CPU</div>
+              <div className="text-xs text-[var(--text-muted)] mb-1">Disk Used</div>
               <div className="text-lg font-semibold text-[var(--text-primary)]">
-                {app.deployment?.resource_limits?.cpu || '—'} vCPU
+                {app.deployment?.usage_stats?.disk_usage_gb 
+                  ? `${app.deployment.usage_stats.disk_usage_gb.toFixed(2)} GB`
+                  : '—'}
               </div>
             </div>
             <div>
@@ -381,85 +385,6 @@ export default function AppDetailsPage() {
                 </div>
               </div>
 
-              {/* Resource Usage */}
-              {app.deployment?.usage_stats && (
-                <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-6">
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Resource Usage</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* RAM Usage */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm text-[var(--text-muted)]">RAM Usage</div>
-                        <div className="text-sm font-semibold text-[var(--text-primary)]">
-                          {app.deployment.usage_stats.memory_usage_mb} MB
-                          {app.deployment.resource_limits?.memory_mb && (
-                            <span className="text-[var(--text-muted)] font-normal">
-                              {' '}/ {app.deployment.resource_limits.memory_mb} MB
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {app.deployment.resource_limits?.memory_mb && (
-                        <div className="w-full bg-[var(--elevated)] rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all ${
-                              app.deployment.usage_stats.memory_usage_percent > 90
-                                ? 'bg-[var(--error)]'
-                                : app.deployment.usage_stats.memory_usage_percent > 70
-                                ? 'bg-[var(--warning)]'
-                                : 'bg-[var(--primary)]'
-                            }`}
-                            style={{
-                              width: `${Math.min(app.deployment.usage_stats.memory_usage_percent, 100)}%`,
-                            }}
-                          />
-                        </div>
-                      )}
-                      {app.deployment.resource_limits?.memory_mb && (
-                        <div className="text-xs text-[var(--text-muted)] mt-1">
-                          {app.deployment.usage_stats.memory_usage_percent.toFixed(1)}% used
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Disk Usage */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm text-[var(--text-muted)]">Disk Usage</div>
-                        <div className="text-sm font-semibold text-[var(--text-primary)]">
-                          {app.deployment.usage_stats.disk_usage_gb.toFixed(2)} GB
-                          {app.deployment.resource_limits?.disk_gb && (
-                            <span className="text-[var(--text-muted)] font-normal">
-                              {' '}/ {app.deployment.resource_limits.disk_gb} GB
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {app.deployment.resource_limits?.disk_gb && (
-                        <div className="w-full bg-[var(--elevated)] rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all ${
-                              app.deployment.usage_stats.disk_usage_percent > 90
-                                ? 'bg-[var(--error)]'
-                                : app.deployment.usage_stats.disk_usage_percent > 70
-                                ? 'bg-[var(--warning)]'
-                                : 'bg-[var(--primary)]'
-                            }`}
-                            style={{
-                              width: `${Math.min(app.deployment.usage_stats.disk_usage_percent, 100)}%`,
-                            }}
-                          />
-                        </div>
-                      )}
-                      {app.deployment.resource_limits?.disk_gb && (
-                        <div className="text-xs text-[var(--text-muted)] mt-1">
-                          {app.deployment.usage_stats.disk_usage_percent.toFixed(1)}% used
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="bg-[var(--primary-muted)]/20 rounded-lg border border-[var(--primary-muted)] p-4">
                 <div className="flex items-start gap-3">
