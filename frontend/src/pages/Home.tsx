@@ -59,6 +59,26 @@ export default function Home() {
   };
 
 
+  // Calculate actual RAM and disk usage from all apps
+  const actualUsage = useMemo(() => {
+    let totalRamMb = 0;
+    let totalDiskMb = 0;
+
+    apps.forEach((app) => {
+      if (app.deployment?.usage_stats) {
+        // Sum RAM usage in MB
+        totalRamMb += app.deployment.usage_stats.memory_usage_mb || 0;
+        // Sum disk usage (convert GB to MB)
+        totalDiskMb += (app.deployment.usage_stats.disk_usage_gb || 0) * 1024;
+      }
+    });
+
+    return {
+      ramMb: Math.round(totalRamMb),
+      diskMb: Math.round(totalDiskMb),
+    };
+  }, [apps]);
+
   // Filter and sort apps
   const filteredAndSortedApps = useMemo(() => {
     let filtered = apps;
@@ -195,13 +215,13 @@ export default function Home() {
                       <div className="flex items-center gap-2">
                         <span className="text-[var(--text-secondary)]">RAM:</span>
                         <span className="font-semibold text-[var(--text-primary)]">
-                          {userProfile.quota.total_ram_mb} MB / {userProfile.quota.plan.max_ram_mb} MB
+                          {actualUsage.ramMb} MB / {userProfile.quota.plan.max_ram_mb} MB
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[var(--text-secondary)]">Disk:</span>
                         <span className="font-semibold text-[var(--text-primary)]">
-                          {userProfile.quota.total_disk_mb} MB / {userProfile.quota.plan.max_disk_mb} MB
+                          {actualUsage.diskMb} MB / {userProfile.quota.plan.max_disk_mb} MB
                         </span>
                       </div>
                     </>
