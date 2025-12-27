@@ -168,4 +168,46 @@ export const healthCheck = async (): Promise<{ status: string }> => {
   return handleResponse<{ status: string }>(response);
 };
 
+// Auth API - New signup flow
+export const authApi = {
+  // Step 1: Initiate signup - send OTP to email
+  signupInitiate: async (email: string): Promise<{ message: string; email: string }> => {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const response = await safeFetch(`${API_BASE_URL}/api/auth/signup/initiate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    }, false);
+    return handleResponse<{ message: string; email: string }>(response);
+  },
+
+  // Step 2: Verify OTP
+  signupVerifyOTP: async (email: string, otp: string): Promise<{ message: string; email: string }> => {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const response = await safeFetch(`${API_BASE_URL}/api/auth/signup/verify-otp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp }),
+    }, false);
+    return handleResponse<{ message: string; email: string }>(response);
+  },
+
+  // Step 3: Complete signup with user details
+  signupComplete: async (email: string, fullName: string, companyName: string, password: string): Promise<{ user: { id: string; email: string; full_name: string; company_name: string; email_verified: boolean }; token: string }> => {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const response = await safeFetch(`${API_BASE_URL}/api/auth/signup/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, full_name: fullName, company_name: companyName, password }),
+    }, false);
+    return handleResponse<{ user: { id: string; email: string; full_name: string; company_name: string; email_verified: boolean }; token: string }>(response);
+  },
+};
+
 

@@ -12,6 +12,9 @@ import (
 type User struct {
 	ID           string    `json:"id"`
 	Email        string    `json:"email"`
+	FullName     *string   `json:"full_name,omitempty"`
+	CompanyName  *string   `json:"company_name,omitempty"`
+	EmailVerified bool     `json:"email_verified"`
 	PasswordHash string    `json:"-"` // Never expose password hash in JSON
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
@@ -46,13 +49,34 @@ func (s *Store) CreateUser(email, password string) (*User, error) {
 	return &user, nil
 }
 
+// CreateUserWithDetails creates a new user with full details (for signup completion)
+func (s *Store) CreateUserWithDetails(email, password, fullName, companyName string, emailVerified bool) (*User, error) {
+	// Hash the password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	var user User
+	id := uuid.New().String()
+	err = s.db.QueryRow(
+		"INSERT INTO users (id, email, password_hash, full_name, company_name, email_verified) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, full_name, company_name, email_verified, created_at, updated_at",
+		id, email, string(hashedPassword), fullName, companyName, emailVerified,
+	).Scan(&user.ID, &user.Email, &user.FullName, &user.CompanyName, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 // GetUserByEmail retrieves a user by email
 func (s *Store) GetUserByEmail(email string) (*User, error) {
 	var user User
 	err := s.db.QueryRow(
-		"SELECT id, email, password_hash, created_at, updated_at FROM users WHERE email = $1",
+		"SELECT id, email, password_hash, full_name, company_name, email_verified, created_at, updated_at FROM users WHERE email = $1",
 		email,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.CompanyName, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +87,9 @@ func (s *Store) GetUserByEmail(email string) (*User, error) {
 func (s *Store) GetUserByID(id string) (*User, error) {
 	var user User
 	err := s.db.QueryRow(
-		"SELECT id, email, password_hash, created_at, updated_at FROM users WHERE id = $1",
+		"SELECT id, email, password_hash, full_name, company_name, email_verified, created_at, updated_at FROM users WHERE id = $1",
 		id,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.CompanyName, &user.EmailVerified, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

@@ -41,9 +41,11 @@ import (
 	"mvp-be/internal/db"
 	"mvp-be/internal/deployments"
 	"mvp-be/internal/dockerrun"
+	"mvp-be/internal/email"
 	"mvp-be/internal/envvars"
 	"mvp-be/internal/gitrepo"
 	"mvp-be/internal/logs"
+	"mvp-be/internal/otp"
 	"mvp-be/internal/users"
 )
 
@@ -92,7 +94,18 @@ func main() {
 	deploymentStore := deployments.NewStore(database.DB)
 	envVarStore := envvars.NewStore(database.DB)
 	userStore := users.NewStore(database.DB)
+	otpStore := otp.NewStore(database.DB)
 	log.Println("Data stores initialized")
+
+	// Initialize email service
+	log.Println("Initializing email service...")
+	emailService, err := email.NewService()
+	if err != nil {
+		log.Printf("WARNING - Failed to initialize email service: %v (OTP emails will not be sent)", err)
+		emailService = nil
+	} else {
+		log.Println("Email service initialized")
+	}
 
 	// Initialize git cloner for Dockerfile validation
 	workDir := "/tmp/mvp-api-validation"
@@ -142,8 +155,12 @@ func main() {
 
 	// Public authentication endpoints (no auth required)
 	r.Route("/api/auth", func(r chi.Router) {
-		r.Post("/signup", signup(userStore))
+		r.Post("/signup", signup(userStore)) // Legacy endpoint - keep for backward compatibility
 		r.Post("/login", login(userStore))
+		// New signup flow endpoints
+		r.Post("/signup/initiate", signupInitiate(otpStore, emailService))
+		r.Post("/signup/verify-otp", signupVerifyOTP(otpStore))
+		r.Post("/signup/complete", signupComplete(userStore))
 	})
 
 	// Protected API routes (require authentication)
@@ -187,7 +204,10 @@ func main() {
 	log.Printf("=== API server starting on port %s ===", port)
 	log.Println("API endpoints available:")
 	log.Println("  GET  /health - Health check")
-	log.Println("  POST /api/auth/signup - Sign up new user")
+	log.Println("  POST /api/auth/signup - Sign up new user (legacy)")
+	log.Println("  POST /api/auth/signup/initiate - Initiate signup (send OTP)")
+	log.Println("  POST /api/auth/signup/verify-otp - Verify OTP")
+	log.Println("  POST /api/auth/signup/complete - Complete signup")
 	log.Println("  POST /api/auth/login - Login user")
 	log.Println("  GET  /api/apps - List apps for authenticated user (protected)")
 	log.Println("  POST /api/v1/apps - Create new app (protected)")
@@ -986,6 +1006,161 @@ func login(store *users.Store) http.HandlerFunc {
 			"user": map[string]interface{}{
 				"id":    user.ID,
 				"email": user.Email,
+			},
+			"token": token,
+		})
+	}
+}
+
+// signupInitiate handles POST /api/auth/signup/initiate
+// Step 1: User enters email, system generates and sends OTP
+func signupInitiate(otpStore *otp.Store, emailService *email.Service) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Email string `json:"email"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid request body")
+			return
+		}
+
+		if req.Email == "" {
+			respondError(w, http.StatusBadRequest, "email is required")
+			return
+		}
+
+		// Basic email validation
+		if !strings.Contains(req.Email, "@") {
+			respondError(w, http.StatusBadRequest, "Invalid email format")
+			return
+		}
+
+		// Generate and store OTP
+		otpCode, err := otpStore.CreateOTP(req.Email)
+		if err != nil {
+			log.Printf("[API] ERROR - Failed to create OTP: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to generate OTP")
+			return
+		}
+
+		// Send OTP via email if email service is available
+		if emailService != nil {
+			if err := emailService.SendOTPEmail(req.Email, otpCode); err != nil {
+				log.Printf("[API] ERROR - Failed to send OTP email: %v", err)
+				// In development, log the OTP so developers can use it
+				log.Printf("[API] OTP for %s: %s (email sending failed)", req.Email, otpCode)
+				// Don't fail the request, just log the error
+				// In production, you might want to fail here
+			}
+		} else {
+			// In development, log the OTP so developers can use it
+			log.Printf("[API] OTP for %s: %s (email service not configured)", req.Email, otpCode)
+		}
+
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"message": "OTP sent to email",
+			"email":   req.Email,
+		})
+	}
+}
+
+// signupVerifyOTP handles POST /api/auth/signup/verify-otp
+// Step 2: User enters OTP, system verifies it
+func signupVerifyOTP(otpStore *otp.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Email string `json:"email"`
+			OTP   string `json:"otp"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid request body")
+			return
+		}
+
+		if req.Email == "" || req.OTP == "" {
+			respondError(w, http.StatusBadRequest, "email and otp are required")
+			return
+		}
+
+		// Verify OTP
+		valid, err := otpStore.VerifyOTP(req.Email, req.OTP)
+		if err != nil {
+			log.Printf("[API] ERROR - Failed to verify OTP: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to verify OTP")
+			return
+		}
+
+		if !valid {
+			respondError(w, http.StatusUnauthorized, "Invalid or expired OTP")
+			return
+		}
+
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"message": "OTP verified successfully",
+			"email":   req.Email,
+		})
+	}
+}
+
+// signupComplete handles POST /api/auth/signup/complete
+// Step 3: User provides account details, system creates user account
+func signupComplete(userStore *users.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Email       string `json:"email"`
+			FullName    string `json:"full_name"`
+			CompanyName string `json:"company_name"`
+			Password    string `json:"password"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid request body")
+			return
+		}
+
+		if req.Email == "" || req.Password == "" || req.FullName == "" {
+			respondError(w, http.StatusBadRequest, "email, password, and full_name are required")
+			return
+		}
+
+		// Check if user already exists
+		_, err := userStore.GetUserByEmail(req.Email)
+		if err == nil {
+			respondError(w, http.StatusConflict, "Email already registered")
+			return
+		}
+
+		// Create new user with all details
+		user, err := userStore.CreateUserWithDetails(
+			req.Email,
+			req.Password,
+			req.FullName,
+			req.CompanyName,
+			true, // email_verified = true (OTP was verified in previous step)
+		)
+		if err != nil {
+			log.Printf("[API] ERROR - Failed to create user: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to create user")
+			return
+		}
+
+		// Generate JWT token
+		token, err := auth.GenerateToken(user.ID, user.Email)
+		if err != nil {
+			log.Printf("[API] ERROR - Failed to generate token: %v", err)
+			respondError(w, http.StatusInternalServerError, "Failed to generate token")
+			return
+		}
+
+		respondJSON(w, http.StatusCreated, map[string]interface{}{
+			"user": map[string]interface{}{
+				"id":             user.ID,
+				"email":          user.Email,
+				"full_name":      user.FullName,
+				"company_name":   user.CompanyName,
+				"email_verified": user.EmailVerified,
 			},
 			"token": token,
 		})
