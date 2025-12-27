@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendEmailVerification,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -26,6 +27,7 @@ interface AuthContextType {
   signupFirebase: (email: string, password: string) => Promise<FirebaseUser>;
   signupComplete: (idToken: string, fullName: string, companyName: string) => Promise<void>;
   resendEmailVerification: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -194,6 +196,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Send password reset email
+  const sendPasswordReset = async (email: string): Promise<void> => {
+    try {
+      // Firebase will use the default action URL configured in Firebase Console
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      // Don't reveal if email exists or not for security
+      // Firebase will send email if account exists, otherwise silently fail
+      if (error.code === 'auth/user-not-found') {
+        // Silently succeed to prevent email enumeration
+        return;
+      }
+      throw new Error(error.message || 'Failed to send password reset email');
+    }
+  };
+
   const signupComplete = async (idToken: string, fullName: string, companyName: string) => {
     if (!firebaseUser) {
       throw new Error('No user logged in');
@@ -254,6 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signupFirebase, 
       signupComplete, 
       resendEmailVerification,
+      sendPasswordReset,
       logout, 
       isLoading 
     }}>
