@@ -25,6 +25,7 @@ interface AuthContextType {
   signup: (email: string, password: string) => Promise<void>;
   signupFirebase: (email: string, password: string) => Promise<FirebaseUser>;
   signupComplete: (idToken: string, fullName: string, companyName: string) => Promise<void>;
+  resendEmailVerification: () => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
 }
@@ -121,7 +122,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Send email verification
-      await sendEmailVerification(userCredential.user);
+      try {
+        await sendEmailVerification(userCredential.user, {
+          url: window.location.origin + '/signup?verified=true',
+          handleCodeInApp: false,
+        });
+        console.log('Email verification sent successfully');
+      } catch (verifyError: any) {
+        console.error('Failed to send email verification:', verifyError);
+        // Don't fail the signup if email sending fails - user can resend later
+        // The error might be due to Firebase configuration issues
+      }
       
       return userCredential.user;
     } catch (error: any) {
@@ -129,7 +140,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Resend email verification
+  const resendEmailVerification = async (): Promise<void> => {
+    if (!firebaseUser) {
+      throw new Error('No user logged in');
+    }
+    
+    try {
+      await sendEmailVerification(firebaseUser, {
+        url: window.location.origin + '/signup?verified=true',
+        handleCodeInApp: false,
+      });
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to resend verification email');
+    }
+  };
+
   const signupComplete = async (idToken: string, fullName: string, companyName: string) => {
+    if (!firebaseUser) {
+      throw new Error('No user logged in');
+    }
+
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
     const response = await fetch(`${API_BASE_URL}/api/auth/signup/complete`, {
       method: 'POST',
@@ -140,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id_token: idToken,
         full_name: fullName,
         company_name: companyName,
+        email: firebaseUser.email || '', // Include email for verification
       }),
     });
 
@@ -183,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup, 
       signupFirebase, 
       signupComplete, 
+      resendEmailVerification,
       logout, 
       isLoading 
     }}>

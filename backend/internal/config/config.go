@@ -27,6 +27,10 @@ type Config struct {
 	// Port is the port number for the HTTP API server.
 	// Default: 8080
 	Port string
+
+	// FirebaseProjectID is the Firebase project ID for token verification
+	// Used when Admin SDK is not available
+	FirebaseProjectID string
 }
 
 // Load reads configuration from environment variables and returns a Config struct.
@@ -37,10 +41,11 @@ type Config struct {
 //   - *Config: A pointer to a Config struct with all values populated
 func Load() *Config {
 	return &Config{
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:ritesh@localhost:5432/mvp?sslmode=disable"),
-		DockerHost:  getEnv("DOCKER_HOST", "tcp://localhost:2375"),
-		BaseDomain:  getEnv("BASE_DOMAIN", "localhost"),
-		Port:        getEnv("PORT", "8080"),
+		DatabaseURL:      getEnv("DATABASE_URL", "postgres://postgres:ritesh@localhost:5432/mvp?sslmode=disable"),
+		DockerHost:       getEnv("DOCKER_HOST", "tcp://localhost:2375"),
+		BaseDomain:       getEnv("BASE_DOMAIN", "localhost"),
+		Port:             getEnv("PORT", "8080"),
+		FirebaseProjectID: getEnv("FIREBASE_PROJECT_ID", "stackyn-4acc0"),
 	}
 }
 

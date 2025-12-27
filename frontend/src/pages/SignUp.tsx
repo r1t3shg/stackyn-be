@@ -19,7 +19,8 @@ export default function SignUp() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
-  const { user, firebaseUser, signupFirebase, signupComplete, isLoading } = useAuth();
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const { user, firebaseUser, signupFirebase, signupComplete, resendEmailVerification, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -39,6 +40,14 @@ export default function SignUp() {
       }
     }
   }, [firebaseUser]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   // Real-time email validation
   useEffect(() => {
@@ -120,11 +129,50 @@ export default function SignUp() {
       await firebaseUser.reload();
       if (firebaseUser.emailVerified) {
         setStep('details');
+        setError(null);
       } else {
-        setError('Email not verified yet. Please check your inbox and click the verification link.');
+        setError('Email not verified yet. Please check your inbox (and spam folder) and click the verification link.');
       }
     } catch (err) {
       setError('Failed to check verification status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resend verification email
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) return;
+
+    setError(null);
+    setLoading(true);
+    try {
+      await resendEmailVerification();
+      setResendCooldown(60); // 60 second cooldown
+      setError(null);
+      // Show success message
+      alert('Verification email sent! Please check your inbox.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend verification email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resend verification email
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) return;
+
+    setError(null);
+    setLoading(true);
+    try {
+      await resendEmailVerification();
+      setResendCooldown(60); // 60 second cooldown
+      setError(null);
+      // Show success message
+      alert('Verification email sent! Please check your inbox.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend verification email');
     } finally {
       setLoading(false);
     }
