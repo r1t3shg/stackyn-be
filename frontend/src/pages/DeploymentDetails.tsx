@@ -207,42 +207,6 @@ export default function DeploymentDetailsPage() {
               <p className="text-[var(--text-secondary)] text-lg mb-4">
                 {statusSummary}
               </p>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div>
-                  <span className="text-[var(--text-muted)]">Environment: </span>
-                  <span className="text-[var(--text-primary)] font-medium">Production</span>
-                </div>
-                {app?.branch && (
-                  <div>
-                    <span className="text-[var(--text-muted)]">Branch: </span>
-                    <span className="text-[var(--text-primary)] font-medium font-mono">{app.branch}</span>
-                  </div>
-                )}
-                {deploymentUrl && (
-                  <div>
-                    <span className="text-[var(--text-muted)]">Live URL: </span>
-                    <a
-                      href={deploymentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[var(--info)] hover:text-[var(--primary)] font-medium"
-                    >
-                      {deploymentUrl}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {deployment.status === 'running' && (
-                <button
-                  onClick={handleRedeploy}
-                  disabled={actionLoading === 'redeploy'}
-                  className="px-4 py-2 bg-[var(--primary)] text-white rounded-lg hover:bg-[var(--primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                >
-                  {actionLoading === 'redeploy' ? 'Redeploying...' : 'Redeploy'}
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -289,59 +253,6 @@ export default function DeploymentDetailsPage() {
                   : 'No logs available yet'}
               </p>
             </div>
-          )}
-        </div>
-
-        {/* Key Details Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {deploymentUrl && (
-            <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-4">
-              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Live URL</h3>
-              <a
-                href={deploymentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[var(--info)] hover:text-[var(--primary)] font-medium break-all"
-              >
-                {deploymentUrl}
-              </a>
-            </div>
-          )}
-          
-          <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-4">
-            <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Deployed</h3>
-            <p className="text-[var(--text-primary)] font-medium">
-              {formatRelativeTime(deployment.created_at)}
-            </p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              {new Date(deployment.created_at).toLocaleString()}
-            </p>
-          </div>
-
-          {app?.deployment?.usage_stats && (
-            <>
-              <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Memory Usage</h3>
-                <p className="text-[var(--text-primary)] font-medium">
-                  {app.deployment.usage_stats.memory_usage_mb.toFixed(0)} MB
-                </p>
-                {app.deployment.resource_limits && (
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
-                    of {app.deployment.resource_limits.memory_mb} MB
-                  </p>
-                )}
-              </div>
-
-              <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-2">Restarts</h3>
-                <p className="text-[var(--text-primary)] font-medium">
-                  {app.deployment.usage_stats.restart_count}
-                </p>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Container restarts
-                </p>
-              </div>
-            </>
           )}
         </div>
 
