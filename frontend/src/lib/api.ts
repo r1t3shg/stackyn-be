@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from './config';
-import type { App, Deployment, DeploymentLogs, CreateAppRequest, CreateAppResponse, EnvVar, CreateEnvVarRequest } from './types';
+import type { App, Deployment, DeploymentLogs, CreateAppRequest, CreateAppResponse, EnvVar, CreateEnvVarRequest, UserProfile } from './types';
 
 // Helper function to handle API responses
 async function handleResponse<T>(response: Response): Promise<T> {
