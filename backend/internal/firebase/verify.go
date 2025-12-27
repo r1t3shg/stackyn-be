@@ -4,7 +4,6 @@ package firebase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
