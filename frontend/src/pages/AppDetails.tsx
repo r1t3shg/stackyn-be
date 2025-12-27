@@ -381,32 +381,82 @@ export default function AppDetailsPage() {
                 </div>
               </div>
 
-              {app.deployment && (
+              {/* Resource Usage */}
+              {app.deployment?.usage_stats && (
                 <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-6">
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Resource Limits</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {app.deployment.resource_limits && (
-                      <>
-                        <div className="bg-[var(--elevated)] rounded-lg p-4 border border-[var(--border-subtle)]">
-                          <div className="text-xs text-[var(--text-muted)] mb-1">Memory</div>
-                          <div className="text-2xl font-bold text-[var(--text-primary)]">
-                            {app.deployment.resource_limits.memory_mb} MB
-                          </div>
+                  <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Resource Usage</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* RAM Usage */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm text-[var(--text-muted)]">RAM Usage</div>
+                        <div className="text-sm font-semibold text-[var(--text-primary)]">
+                          {app.deployment.usage_stats.memory_usage_mb} MB
+                          {app.deployment.resource_limits?.memory_mb && (
+                            <span className="text-[var(--text-muted)] font-normal">
+                              {' '}/ {app.deployment.resource_limits.memory_mb} MB
+                            </span>
+                          )}
                         </div>
-                        <div className="bg-[var(--elevated)] rounded-lg p-4 border border-[var(--border-subtle)]">
-                          <div className="text-xs text-[var(--text-muted)] mb-1">CPU</div>
-                          <div className="text-2xl font-bold text-[var(--text-primary)]">
-                            {app.deployment.resource_limits.cpu} vCPU
-                          </div>
+                      </div>
+                      {app.deployment.resource_limits?.memory_mb && (
+                        <div className="w-full bg-[var(--elevated)] rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              app.deployment.usage_stats.memory_usage_percent > 90
+                                ? 'bg-[var(--error)]'
+                                : app.deployment.usage_stats.memory_usage_percent > 70
+                                ? 'bg-[var(--warning)]'
+                                : 'bg-[var(--primary)]'
+                            }`}
+                            style={{
+                              width: `${Math.min(app.deployment.usage_stats.memory_usage_percent, 100)}%`,
+                            }}
+                          />
                         </div>
-                        <div className="bg-[var(--elevated)] rounded-lg p-4 border border-[var(--border-subtle)]">
-                          <div className="text-xs text-[var(--text-muted)] mb-1">Disk</div>
-                          <div className="text-2xl font-bold text-[var(--text-primary)]">
-                            {app.deployment.resource_limits.disk_gb} GB
-                          </div>
+                      )}
+                      {app.deployment.resource_limits?.memory_mb && (
+                        <div className="text-xs text-[var(--text-muted)] mt-1">
+                          {app.deployment.usage_stats.memory_usage_percent.toFixed(1)}% used
                         </div>
-                      </>
-                    )}
+                      )}
+                    </div>
+
+                    {/* Disk Usage */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm text-[var(--text-muted)]">Disk Usage</div>
+                        <div className="text-sm font-semibold text-[var(--text-primary)]">
+                          {app.deployment.usage_stats.disk_usage_gb.toFixed(2)} GB
+                          {app.deployment.resource_limits?.disk_gb && (
+                            <span className="text-[var(--text-muted)] font-normal">
+                              {' '}/ {app.deployment.resource_limits.disk_gb} GB
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {app.deployment.resource_limits?.disk_gb && (
+                        <div className="w-full bg-[var(--elevated)] rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              app.deployment.usage_stats.disk_usage_percent > 90
+                                ? 'bg-[var(--error)]'
+                                : app.deployment.usage_stats.disk_usage_percent > 70
+                                ? 'bg-[var(--warning)]'
+                                : 'bg-[var(--primary)]'
+                            }`}
+                            style={{
+                              width: `${Math.min(app.deployment.usage_stats.disk_usage_percent, 100)}%`,
+                            }}
+                          />
+                        </div>
+                      )}
+                      {app.deployment.resource_limits?.disk_gb && (
+                        <div className="text-xs text-[var(--text-muted)] mt-1">
+                          {app.deployment.usage_stats.disk_usage_percent.toFixed(1)}% used
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
