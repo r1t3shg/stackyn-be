@@ -386,6 +386,19 @@ export default function SignUp() {
                 {loading ? 'Checking...' : 'I\'ve verified my email'}
               </button>
 
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendCooldown > 0 || loading}
+                  className="text-sm text-[var(--primary)] hover:text-[var(--primary-hover)] disabled:text-[var(--text-muted)] disabled:cursor-not-allowed transition-colors"
+                >
+                  {resendCooldown > 0
+                    ? `Resend email in ${resendCooldown}s`
+                    : "Didn't receive email? Resend verification"}
+                </button>
+              </div>
+
               <button
                 onClick={() => setStep('credentials')}
                 className="w-full py-3 px-4 border border-[var(--border-subtle)] text-sm font-medium rounded-lg text-[var(--text-primary)] bg-[var(--surface)] hover:bg-[var(--elevated)] focus:outline-none transition-colors"
