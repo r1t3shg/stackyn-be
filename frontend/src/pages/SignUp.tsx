@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Logo from '@/components/Logo';
 
 type SignupStep = 'credentials' | 'verify' | 'details';
 
 export default function SignUp() {
+  const [searchParams] = useSearchParams();
+  const selectedPlan = searchParams.get('plan') || 'free'; // Default to 'free' if no plan specified
+  
   const [step, setStep] = useState<SignupStep>('credentials');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -177,7 +180,7 @@ export default function SignUp() {
     setLoading(true);
     try {
       const idToken = await firebaseUser.getIdToken();
-      await signupComplete(idToken, fullName, companyName);
+      await signupComplete(idToken, fullName, companyName, selectedPlan);
       // Redirect to apps page
       navigate('/apps');
     } catch (err) {

@@ -52,18 +52,29 @@ func (s *Store) CreateUser(email, password string) (*User, error) {
 }
 
 // CreateUserWithDetails creates a new user with full details (for signup completion)
-func (s *Store) CreateUserWithDetails(email, password, fullName, companyName string, emailVerified bool) (*User, error) {
+// plan defaults to 'free' if empty or invalid
+func (s *Store) CreateUserWithDetails(email, password, fullName, companyName string, emailVerified bool, plan string) (*User, error) {
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
+	// Validate and default plan
+	if plan == "" {
+		plan = "free"
+	}
+	// Validate plan name (free, starter, builder, pro)
+	validPlans := map[string]bool{"free": true, "starter": true, "builder": true, "pro": true}
+	if !validPlans[plan] {
+		plan = "free" // Default to free if invalid
+	}
+
 	var user User
 	id := uuid.New().String()
 	err = s.db.QueryRow(
-		"INSERT INTO users (id, email, password_hash, full_name, company_name, email_verified, plan) VALUES ($1, $2, $3, $4, $5, $6, 'free') RETURNING id, email, full_name, company_name, email_verified, plan, created_at, updated_at",
-		id, email, string(hashedPassword), fullName, companyName, emailVerified,
+		"INSERT INTO users (id, email, password_hash, full_name, company_name, email_verified, plan) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, email, full_name, company_name, email_verified, plan, created_at, updated_at",
+		id, email, string(hashedPassword), fullName, companyName, emailVerified, plan,
 	).Scan(&user.ID, &user.Email, &user.FullName, &user.CompanyName, &user.EmailVerified, &user.Plan, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return nil, err

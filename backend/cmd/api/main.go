@@ -1233,6 +1233,7 @@ func signupCompleteFirebase(firebaseService *firebase.Service, userStore *users.
 			FullName    string `json:"full_name"`
 			CompanyName string `json:"company_name"`
 			Email       string `json:"email"` // Email from verified Firebase user (optional)
+			Plan        string `json:"plan"`   // Selected plan (free, starter, builder, pro)
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1306,6 +1307,18 @@ func signupCompleteFirebase(firebaseService *firebase.Service, userStore *users.
 			return
 		}
 
+		// Validate plan if provided
+		plan := req.Plan
+		if plan == "" {
+			plan = "free" // Default to free if not specified
+		}
+		// Validate plan name
+		validPlans := map[string]bool{"free": true, "starter": true, "builder": true, "pro": true}
+		if !validPlans[plan] {
+			plan = "free" // Default to free if invalid
+			log.Printf("[API] WARNING - Invalid plan '%s' provided, defaulting to 'free'", req.Plan)
+		}
+
 		// Create user in our database
 		// Use Firebase UID as the user ID, or generate a new UUID
 		// We'll store Firebase UID separately or use it as the primary ID
@@ -1315,6 +1328,7 @@ func signupCompleteFirebase(firebaseService *firebase.Service, userStore *users.
 			req.FullName,
 			req.CompanyName,
 			true, // email_verified = true (verified by Firebase)
+			plan, // Selected plan
 		)
 		if err != nil {
 			log.Printf("[API] ERROR - Failed to create user: %v", err)

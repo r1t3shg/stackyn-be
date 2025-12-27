@@ -488,11 +488,11 @@ export default function LandingPage() {
                 <div className="text-3xl font-bold text-[var(--text-primary)] mb-2">$0</div>
               </div>
               <a
-                href={user ? "https://console.staging.stackyn.com/" : "/signup"}
+                href={user ? "https://console.staging.stackyn.com/" : "/signup?plan=free"}
                 onClick={(e) => {
                   if (!user) {
                     e.preventDefault();
-                    navigate('/signup');
+                    navigate('/signup?plan=free');
                   } else {
                     handleSignInClick(e);
                   }
@@ -542,11 +542,11 @@ export default function LandingPage() {
                 <div className="text-3xl font-bold text-[var(--text-primary)] mb-2">$5 <span className="text-lg font-normal text-[var(--text-muted)]">/ month</span></div>
               </div>
               <a
-                href={user ? "https://console.staging.stackyn.com/" : "/signup"}
+                href={user ? "https://console.staging.stackyn.com/" : "/signup?plan=starter"}
                 onClick={(e) => {
                   if (!user) {
                     e.preventDefault();
-                    navigate('/signup');
+                    navigate('/signup?plan=starter');
                   } else {
                     handleSignInClick(e);
                   }
@@ -599,11 +599,11 @@ export default function LandingPage() {
                 <div className="text-3xl font-bold text-[var(--text-primary)] mb-2">$15 <span className="text-lg font-normal text-[var(--text-muted)]">/ month</span></div>
               </div>
               <a
-                href={user ? "https://console.staging.stackyn.com/" : "/signup"}
+                href={user ? "https://console.staging.stackyn.com/" : "/signup?plan=builder"}
                 onClick={(e) => {
                   if (!user) {
                     e.preventDefault();
-                    navigate('/signup');
+                    navigate('/signup?plan=builder');
                   } else {
                     handleSignInClick(e);
                   }
@@ -653,11 +653,11 @@ export default function LandingPage() {
                 <div className="text-3xl font-bold text-[var(--text-primary)] mb-2">$29 <span className="text-lg font-normal text-[var(--text-muted)]">/ month</span></div>
               </div>
               <a
-                href={user ? "https://console.staging.stackyn.com/" : "/signup"}
+                href={user ? "https://console.staging.stackyn.com/" : "/signup?plan=pro"}
                 onClick={(e) => {
                   if (!user) {
                     e.preventDefault();
-                    navigate('/signup');
+                    navigate('/signup?plan=pro');
                   } else {
                     handleSignInClick(e);
                   }

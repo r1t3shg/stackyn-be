@@ -25,7 +25,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   signupFirebase: (email: string, password: string) => Promise<FirebaseUser>;
-  signupComplete: (idToken: string, fullName: string, companyName: string) => Promise<void>;
+  signupComplete: (idToken: string, fullName: string, companyName: string, plan?: string) => Promise<void>;
   resendEmailVerification: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -212,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signupComplete = async (idToken: string, fullName: string, companyName: string) => {
+  const signupComplete = async (idToken: string, fullName: string, companyName: string, plan: string = 'free') => {
     if (!firebaseUser) {
       throw new Error('No user logged in');
     }
@@ -228,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         full_name: fullName,
         company_name: companyName,
         email: firebaseUser.email || '', // Include email for verification
+        plan: plan, // Include selected plan
       }),
     });
 
