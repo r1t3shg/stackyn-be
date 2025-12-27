@@ -67,9 +67,11 @@ export default function Home() {
     apps.forEach((app) => {
       if (app.deployment?.usage_stats) {
         // Sum RAM usage in MB
-        totalRamMb += app.deployment.usage_stats.memory_usage_mb || 0;
+        const ramUsage = app.deployment.usage_stats.memory_usage_mb || 0;
+        totalRamMb += ramUsage;
         // Sum disk usage (convert GB to MB)
-        totalDiskMb += (app.deployment.usage_stats.disk_usage_gb || 0) * 1024;
+        const diskUsageGb = app.deployment.usage_stats.disk_usage_gb || 0;
+        totalDiskMb += diskUsageGb * 1024;
       }
     });
 

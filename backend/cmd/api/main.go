@@ -191,7 +191,7 @@ func main() {
 	// Authenticated endpoint for listing apps by user (GET /api/apps)
 	r.Route("/api/apps", func(r chi.Router) {
 		r.Use(createAuthMiddleware(firebaseService, userStore))
-		r.Get("/", listAppsByUser(appStore))
+		r.Get("/", listAppsByUser(appStore, deploymentStore, runner))
 	})
 
 	// User profile endpoint (GET /api/user/me)
@@ -1405,7 +1405,7 @@ func verifyFirebaseToken(firebaseService *firebase.Service) http.HandlerFunc {
 }
 
 // listAppsByUser handles GET /api/apps
-// Lists all apps owned by the authenticated user.
+// Lists all apps owned by the authenticated user with deployment and usage information.
 // Response format:
 //
 //	[
@@ -1418,10 +1418,17 @@ func verifyFirebaseToken(firebaseService *firebase.Service) http.HandlerFunc {
 //	    "repo_url": "https://github.com/go-chi/chi.git",
 //	    "branch": "main",
 //	    "created_at": "2025-12-10T14:22:11Z",
-//	    "updated_at": "2025-12-17T19:40:00Z"
+//	    "updated_at": "2025-12-17T19:40:00Z",
+//	    "deployment": {
+//	      "active_deployment_id": "dep_456",
+//	      "last_deployed_at": "2025-12-17T19:40:00Z",
+//	      "state": "running",
+//	      "resource_limits": {...},
+//	      "usage_stats": {...}
+//	    }
 //	  }
 //	]
-func listAppsByUser(store *apps.Store) http.HandlerFunc {
+func listAppsByUser(appStore *apps.Store, deploymentStore *deployments.Store, runner *dockerrun.Runner) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract user_id from request context (set by auth middleware)
 		userID, ok := auth.GetUserID(r)
@@ -1431,15 +1438,109 @@ func listAppsByUser(store *apps.Store) http.HandlerFunc {
 		}
 
 		// Query apps for this user
-		apps, err := store.ListAppsByUserID(r.Context(), userID)
+		appsList, err := appStore.ListAppsByUserID(r.Context(), userID)
 		if err != nil {
 			// On DB error, return 500 with JSON error message
 			respondError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 
+		// Build response with deployment and usage info for each app
+		response := make([]map[string]interface{}, 0, len(appsList))
+		for _, app := range appsList {
+			appID, err := strconv.Atoi(app.ID)
+			if err != nil {
+				log.Printf("[API] WARNING - Invalid app ID format: %s, skipping deployment info", app.ID)
+				// Still include the app without deployment info
+				response = append(response, map[string]interface{}{
+					"id":        app.ID,
+					"name":      app.Name,
+					"slug":      app.Slug,
+					"status":    app.Status,
+					"url":       app.URL,
+					"repo_url":  app.RepoURL,
+					"branch":    app.Branch,
+					"created_at": app.CreatedAt,
+					"updated_at": app.UpdatedAt,
+				})
+				continue
+			}
+
+			// Get the latest deployment for this app
+			appDeployments, err := deploymentStore.ListByAppID(appID)
+			var activeDeployment *deployments.Deployment
+			if err == nil && len(appDeployments) > 0 {
+				activeDeployment = appDeployments[0] // First one is the latest (ordered by created_at DESC)
+			}
+
+			// Build app response
+			appResponse := map[string]interface{}{
+				"id":        app.ID,
+				"name":      app.Name,
+				"slug":      app.Slug,
+				"status":    app.Status,
+				"url":       app.URL,
+				"repo_url":  app.RepoURL,
+				"branch":    app.Branch,
+				"created_at": app.CreatedAt,
+				"updated_at": app.UpdatedAt,
+			}
+
+			// Add deployment info
+			if activeDeployment != nil {
+				// Map deployment status to state
+				state := string(activeDeployment.Status)
+				// Format deployment ID as "dep_{id}"
+				activeDeploymentID := fmt.Sprintf("dep_%d", activeDeployment.ID)
+				
+				deploymentInfo := map[string]interface{}{
+					"active_deployment_id": activeDeploymentID,
+					"last_deployed_at":     activeDeployment.UpdatedAt,
+					"state":                state,
+				}
+				
+				// Try to get resource limits and usage stats from Docker container if it exists
+				if activeDeployment.ContainerID.Valid && activeDeployment.ContainerID.String != "" {
+					ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+					defer cancel()
+					
+					memoryLimitMB, cpuLimit, diskLimitGB, limitsErr := runner.GetResourceLimits(ctx, activeDeployment.ContainerID.String)
+					if limitsErr == nil {
+						deploymentInfo["resource_limits"] = map[string]interface{}{
+							"memory_mb": memoryLimitMB,
+							"cpu":       cpuLimit,
+							"disk_gb":   diskLimitGB,
+						}
+						
+						// Get usage stats
+						usageStats, usageErr := runner.GetContainerUsageStats(ctx, activeDeployment.ContainerID.String, memoryLimitMB, diskLimitGB)
+						if usageErr == nil {
+							deploymentInfo["usage_stats"] = map[string]interface{}{
+								"memory_usage_mb":     usageStats.MemoryUsageMB,
+								"memory_usage_percent": usageStats.MemoryUsagePercent,
+								"disk_usage_gb":        usageStats.DiskUsageGB,
+								"disk_usage_percent":   usageStats.DiskUsagePercent,
+								"restart_count":        usageStats.RestartCount,
+							}
+						}
+					}
+				}
+				
+				appResponse["deployment"] = deploymentInfo
+			} else {
+				// No deployment found
+				appResponse["deployment"] = map[string]interface{}{
+					"active_deployment_id": nil,
+					"last_deployed_at":    nil,
+					"state":               "none",
+				}
+			}
+
+			response = append(response, appResponse)
+		}
+
 		// Return 200 with JSON array (empty array if none)
-		respondJSON(w, http.StatusOK, apps)
+		respondJSON(w, http.StatusOK, response)
 	}
 }
 
