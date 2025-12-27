@@ -116,4 +116,10 @@ body {
   color: var(--app-bg);
 }
 
+/* Thin focus border for inputs */
+input:focus,
+textarea:focus {
+  border-width: 1px;
+  box-shadow: 0 0 0 0.5px var(--focus-border);
+}
 
