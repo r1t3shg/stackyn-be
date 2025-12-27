@@ -133,7 +133,13 @@ export default function NewAppModal({ isOpen, onClose, onAppCreated }: NewAppMod
                 id="modal-name"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  // Replace spaces with hyphens and convert to lowercase
+                  const transformedValue = e.target.value
+                    .replace(/\s+/g, '-')  // Replace spaces with hyphens
+                    .toLowerCase();         // Convert to lowercase
+                  setFormData({ ...formData, name: transformedValue });
+                }}
                 className="w-full px-4 py-2 bg-[var(--surface)] border border-[var(--border-subtle)] rounded-lg focus:border-[var(--focus-border)] text-[var(--text-primary)]"
                 placeholder="my-awesome-app"
                 disabled={loading}
