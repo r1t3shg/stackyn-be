@@ -820,7 +820,11 @@ func deleteApp(appStore *apps.Store, deploymentStore *deployments.Store, runner 
 		}
 
 		log.Printf("[API] App and all associated resources deleted successfully - ID: %d", id)
-		w.WriteHeader(http.StatusNoContent)
+		// Return success response immediately
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"message": "App deleted successfully",
+			"app_id":  id,
+		})
 	}
 }
 

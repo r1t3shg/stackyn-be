@@ -11,13 +11,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 // Helper to handle fetch errors with better messages
-async function safeFetch(url: string, options?: RequestInit, requireAuth: boolean = true): Promise<Response> {
+async function safeFetch(url: string, options?: RequestInit, requireAuth: boolean = true, timeout: number = 10000): Promise<Response> {
   // Always log requests for debugging
   console.log('Making API request to:', url, options ? `Method: ${options.method || 'GET'}` : '');
   
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     // Add Authorization header if auth is required
     const headers = new Headers(options?.headers);
@@ -54,7 +54,7 @@ async function safeFetch(url: string, options?: RequestInit, requireAuth: boolea
       throw new Error(`Cannot connect to backend API at ${url}. Make sure the backend server is running and accessible.`);
     }
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error(`Request to ${url} timed out after 10 seconds.`);
+      throw new Error(`Request to ${url} timed out after ${timeout / 1000} seconds.`);
     }
     throw err;
   }
@@ -88,11 +88,11 @@ export const appsApi = {
     return handleResponse<CreateAppResponse>(response);
   },
 
-  // Delete an app
+  // Delete an app (longer timeout for Docker cleanup operations)
   delete: async (id: string | number): Promise<void> => {
     const response = await safeFetch(`${API_ENDPOINTS.appsV1}/${id}`, {
       method: 'DELETE',
-    }, true);
+    }, true, 120000); // 2 minute timeout for delete operations
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: response.statusText }));
       throw new Error(error.error || `HTTP error! status: ${response.status}`);
