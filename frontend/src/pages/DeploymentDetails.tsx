@@ -187,14 +187,14 @@ export default function DeploymentDetailsPage() {
             )}
           </div>
           
-          {logs && extractString(logs.runtime_log) ? (
-            <LogsViewer logs={extractString(logs.runtime_log)} />
+          {logs && extractString(logs.build_log) ? (
+            <LogsViewer logs={extractString(logs.build_log)} />
           ) : (
             <div className="bg-[var(--surface)] rounded-lg border border-[var(--border-subtle)] p-8 text-center">
               <p className="text-[var(--text-secondary)]">
                 {deployment.status === 'pending' || deployment.status === 'building'
-                  ? 'Runtime logs will appear here once the deployment is running...'
-                  : 'No runtime logs available yet'}
+                  ? 'Build logs will appear here as the deployment progresses...'
+                  : 'No build logs available yet'}
               </p>
             </div>
           )}

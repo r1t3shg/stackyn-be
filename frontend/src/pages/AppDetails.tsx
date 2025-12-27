@@ -536,16 +536,12 @@ export default function AppDetailsPage() {
                   </div>
                 </div>
                 {logs ? (
-                  <div className="space-y-4">
-                    {logs.build_log && (
-                      <LogsViewer logs={logs.build_log} title="Build Logs" />
-                    )}
-                    {logs.runtime_log && (
-                      <LogsViewer logs={logs.runtime_log} title="Runtime Logs" />
-                    )}
-                    {!logs.build_log && !logs.runtime_log && (
+                  <div>
+                    {extractString(logs.runtime_log) ? (
+                      <LogsViewer logs={extractString(logs.runtime_log)} title="Runtime Logs" />
+                    ) : (
                       <div className="text-center py-8 text-[var(--text-muted)]">
-                        <p>No logs available yet</p>
+                        <p>No runtime logs available yet</p>
                       </div>
                     )}
                   </div>
