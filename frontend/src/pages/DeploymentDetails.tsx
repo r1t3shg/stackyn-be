@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { deploymentsApi, appsApi } from '@/lib/api';
 import type { Deployment, DeploymentLogs, App } from '@/lib/types';
 import { extractString } from '@/lib/types';
@@ -8,7 +8,6 @@ import LogsViewer from '@/components/LogsViewer';
 
 export default function DeploymentDetailsPage() {
   const params = useParams<{ id: string; deploymentId: string }>();
-  const navigate = useNavigate();
   const deploymentId = params.deploymentId!;
   const appId = params.id!;
 
@@ -17,7 +16,6 @@ export default function DeploymentDetailsPage() {
   const [logs, setLogs] = useState<DeploymentLogs | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   useEffect(() => {
@@ -76,23 +74,6 @@ export default function DeploymentDetailsPage() {
     }
   };
 
-  const handleRedeploy = async () => {
-    if (!confirm('Are you sure you want to redeploy this app? This will trigger a new build and deployment.')) {
-      return;
-    }
-    setActionLoading('redeploy');
-    try {
-      await appsApi.redeploy(appId);
-      // Navigate back to app details to see the new deployment
-      navigate(`/apps/${appId}`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to redeploy app');
-      console.error('Error redeploying app:', err);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const getStatusLabel = (status: string): string => {
     switch (status) {
       case 'running':
@@ -128,29 +109,6 @@ export default function DeploymentDetailsPage() {
     }
   };
 
-  const getDeploymentUrl = (): string | null => {
-    const subdomain = extractString(deployment?.subdomain);
-    if (subdomain) {
-      return `https://${subdomain}`;
-    }
-    return null;
-  };
-
-  const formatRelativeTime = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    return date.toLocaleDateString();
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center">
@@ -180,7 +138,6 @@ export default function DeploymentDetailsPage() {
     );
   }
 
-  const deploymentUrl = getDeploymentUrl();
   const statusLabel = getStatusLabel(deployment.status);
   const statusSummary = getStatusSummary();
 
